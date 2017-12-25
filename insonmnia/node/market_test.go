@@ -488,3 +488,20 @@ func TestCreateOrder_LackBalance(t *testing.T) {
 		fmt.Sprintf("Wait for status %s, but has %s", statusMap[statusFailed], statusMap[handlr.status]))
 	assert.Error(t, handlr.err, errProposeNotAccepted)
 }
+
+func TestCreateOrder_CalculatePrice(t *testing.T) {
+	handlr := &orderHandler{
+		order: &pb.Order{
+			// price per sec
+			Price: "5",
+			Slot: &pb.Slot{
+				// seconds
+				Duration: 5,
+			},
+		},
+	}
+
+	price, err := handlr.calculateOrderPrice()
+	assert.NoError(t, err)
+	assert.Equal(t, "25", price)
+}

@@ -192,20 +192,28 @@ func (h *orderHandler) propose(askID, supID string) error {
 	return nil
 }
 
+func (h *orderHandler) calculateOrderPrice() (string, error) {
+	pricePerSecond, err := util.ParseBigInt(h.order.GetPrice())
+	if err != nil {
+		return "", err
+	}
+
+	durationInSeconds := big.NewInt(int64(h.order.GetSlot().GetDuration()))
+	price := big.NewInt(0).Mul(pricePerSecond, durationInSeconds).String()
+
+	return price, nil
+}
+
 // createDeal creates deal on Ethereum blockchain
 func (h *orderHandler) createDeal(order *pb.Order, key *ecdsa.PrivateKey, wait time.Duration) (*big.Int, error) {
 	log.G(h.ctx).Info("creating deal on Etherum")
 	h.status = statusDealing
 
-	bigPricePerHour, err := util.ParseBigInt(h.order.GetPrice())
+	price, err := h.calculateOrderPrice()
 	if err != nil {
 		h.setError(err)
 		return nil, err
 	}
-	bigDuration := big.NewInt(int64(h.order.GetSlot().GetDuration()))
-
-	bigDurationHours := big.NewInt(0).Div(bigDuration, big.NewInt(3600))
-	price := big.NewInt(0).Mul(bigPricePerHour, bigDurationHours).String()
 
 	deal := &pb.Deal{
 		WorkTime:          h.order.GetSlot().GetDuration(),
