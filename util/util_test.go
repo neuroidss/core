@@ -2,102 +2,94 @@ package util
 
 import (
 	"fmt"
+	"math/big"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestParseEndpoint(t *testing.T) {
+func TestStringToEtherPrice(t *testing.T) {
 	tests := []struct {
-		input    string
-		expected string
-		mustErr  bool
+		in       string
+		out      float64
+		mustFail bool
 	}{
 		{
-			input:    "192.168.0.1:10001",
-			expected: "10001",
-			mustErr:  false,
+			// value is too low
+			in:       "0.0000000000000000001",
+			mustFail: true,
 		},
 		{
-			input:    ":10002",
-			expected: "10002",
-			mustErr:  false,
+			in:  "10000000000000000000000",
+			out: 1e40,
 		},
 		{
-			input:    "192.168.0.1",
-			expected: "",
-			mustErr:  true,
+			in:  "1000000000000",
+			out: 1e30,
 		},
 		{
-			input:    "192.168.0.1:qwer",
-			expected: "",
-			mustErr:  true,
+			in:  "1",
+			out: 1e18,
 		},
 		{
-			input:    "192.168.0.1:99999",
-			expected: "",
-			mustErr:  true,
+			in:  "0.1",
+			out: 1e17,
+		},
+		{
+			in:  "0.00000001",
+			out: 1e10,
+		},
+		{
+			in:       "-1",
+			out:      0,
+			mustFail: true,
+		},
+		{
+			in:       "-10000000000000000",
+			out:      -1e34,
+			mustFail: true,
+		},
+		{
+			in:       "",
+			mustFail: true,
+		},
+		{
+			in:       "-",
+			mustFail: true,
+		},
+		{
+			in:       "099",
+			out:      99e18,
+			mustFail: false,
+		},
+		{
+			in:       "-099",
+			out:      -99e18,
+			mustFail: true,
+		},
+		{
+			in:  "0xff",
+			out: 255e18,
+		},
+		{
+			in:       "    1",
+			out:      0,
+			mustFail: true,
+		},
+		{
+			in:       "1    ",
+			out:      0,
+			mustFail: true,
 		},
 	}
 
 	for _, tt := range tests {
-		port, err := ParseEndpointPort(tt.input)
-		assert.Equal(t, tt.expected, port)
-		if tt.mustErr {
-			assert.Error(t, err)
+		out, err := StringToEtherPrice(tt.in)
+		if !tt.mustFail {
+			f, _ := big.NewFloat(tt.out).Int(nil)
+			assert.True(t, out.Cmp(f) == 0, fmt.Sprintf("expect %s == %s", tt.in, out.String()))
 		} else {
-			assert.NoError(t, err)
+			assert.Error(t, err, fmt.Sprintf("test must fail for value %s", tt.in))
 		}
-	}
-}
-
-func TestEqualAddresses(t *testing.T) {
-	cases := []struct {
-		a    string
-		b    string
-		isEq bool
-	}{
-		{
-			a:    "1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaB",
-			b:    "1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab",
-			isEq: true,
-		},
-		{
-			a:    "1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaB",
-			b:    "0x1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab",
-			isEq: true,
-		},
-		{
-			a:    "1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaB",
-			b:    "2aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaB",
-			isEq: false,
-		},
-		{
-			a:    "0x1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaB",
-			b:    "0x1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaB",
-			isEq: true,
-		},
-		{
-			a:    "0x0",
-			b:    "0x1",
-			isEq: false,
-		},
-		{
-			a:    "0",
-			b:    "1",
-			isEq: false,
-		},
-		{
-			a:    "0x",
-			b:    "0x",
-			isEq: true,
-		},
-	}
-
-	for _, cc := range cases {
-		a := common.HexToAddress(cc.a)
-		b := common.HexToAddress(cc.b)
-		assert.Equal(t, cc.isEq, EqualAddresses(a, b), fmt.Sprintf("compare %s and %s failed", cc.a, cc.b))
 	}
 }

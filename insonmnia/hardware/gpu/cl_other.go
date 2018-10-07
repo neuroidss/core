@@ -2,10 +2,10 @@
 
 package gpu
 
-import "errors"
+import (
+	"github.com/sonm-io/core/proto"
+)
 
-var ErrUnsupportedPlatform = errors.New("the platform is not currently supported to expose GPU devices")
-
-func GetGPUDevicesUsingOpenCL() ([]Device, error) {
+func GetGPUDevicesUsingOpenCL() ([]*sonm.GPUDevice, error) {
 	return nil, ErrUnsupportedPlatform
 }

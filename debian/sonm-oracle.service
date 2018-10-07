@@ -1,0 +1,15 @@
+[Unit]
+Description=SONM Oracle
+Wants=network-online.target
+After=network.target network-online.target
+
+
+[Service]
+EnvironmentFile=/etc/default/sonm-oracle
+Type=simple
+ExecStart=/usr/bin/sonmoracle --config=${CONFIG_PATH}
+Restart=on-failure
+
+
+[Install]
+WantedBy=multi-user.target

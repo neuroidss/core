@@ -1,72 +1,53 @@
 package main
 
 import (
+	"context"
 	"fmt"
-	"os"
 
-	"crypto/ecdsa"
-
-	log "github.com/noxiouz/zapctx/ctxlog"
-	flag "github.com/ogier/pflag"
-	"github.com/sonm-io/core/accounts"
+	"github.com/noxiouz/zapctx/ctxlog"
+	"github.com/sonm-io/core/cmd"
 	"github.com/sonm-io/core/insonmnia/logging"
 	"github.com/sonm-io/core/insonmnia/node"
-	"golang.org/x/net/context"
-)
-
-var (
-	configPath  = flag.String("config", "node.yaml", "Local Node config path")
-	showVersion = flag.BoolP("version", "v", false, "Show Node version and exit")
-	version     string
+	"github.com/sonm-io/core/util/metrics"
+	"golang.org/x/sync/errgroup"
 )
 
 func main() {
-	flag.Parse()
-
-	if *showVersion {
-		fmt.Printf("SONM Locator %s\r\n", version)
-		return
-	}
-
-	cfg, err := node.NewConfig(*configPath)
-	if err != nil {
-		fmt.Printf("Err: Cannot load config file: %s\r\n", err)
-		os.Exit(1)
-	}
-
-	logger := logging.BuildLogger(cfg.LogLevel(), true)
-	ctx := log.WithLogger(context.Background(), logger)
-
-	key, err := loadKeys(cfg)
-	if err != nil {
-		fmt.Printf("Cannot load Etherum keys: %s\r\n", err.Error())
-		os.Exit(1)
-	}
-
-	n, err := node.New(ctx, cfg, key)
-	if err != nil {
-		fmt.Printf("Err: cannot build Node instance: %s\r\n", err)
-		os.Exit(1)
-	}
-
-	fmt.Printf("Starting Local Node at %s...\r\n", cfg.ListenAddress())
-	if err := n.Serve(); err != nil {
-		fmt.Printf("Cannot start Local Node: %s\r\n", err.Error())
-		os.Exit(1)
-	}
+	cmd.NewCmd(run).Execute()
 }
 
-func loadKeys(c node.Config) (*ecdsa.PrivateKey, error) {
-	p := accounts.NewFmtPrinter()
-	ko, err := accounts.DefaultKeyOpener(p, c.KeyStore(), c.PassPhrase())
+func run(app cmd.AppContext) error {
+	cfg, err := node.NewConfig(app.ConfigPath)
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("failed to load config file: %s", err)
 	}
 
-	_, err = ko.OpenKeystore()
+	log, err := logging.BuildLogger(cfg.Log)
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("failed to build logger instance: %s", err)
 	}
 
-	return ko.GetKey()
+	ctx := ctxlog.WithLogger(context.Background(), log)
+
+	wg, ctx := errgroup.WithContext(ctx)
+	wg.Go(func() error {
+		return cmd.WaitInterrupted(ctx)
+	})
+	wg.Go(func() error {
+		server, err := node.New(ctx, cfg, node.WithLog(log))
+		if err != nil {
+			return fmt.Errorf("failed to build Node instance: %s", err)
+		}
+
+		return server.Serve(ctx)
+	})
+	wg.Go(func() error {
+		return metrics.NewPrometheusExporter(cfg.MetricsListenAddr, metrics.WithLogging(log.Sugar())).Serve(ctx)
+	})
+
+	if err := wg.Wait(); err != nil {
+		return fmt.Errorf("node termination: %s", err)
+	}
+
+	return nil
 }

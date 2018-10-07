@@ -3,6 +3,7 @@
 *.a
 *.so
 *.uuid
+target/
 
 # Folders
 _obj
@@ -25,23 +26,11 @@ _testmain.go
 *.prof
 
 coverage*
+!.ci/coverage.sh
 
-sonmhub
-sonmcli
-sonmcli_win32.exe
-sonmworker
-sonmbootnode
-sonmmarketplace
-sonmlocator
-sonmnode
+target/
+release/
 .idea/
-
-
-fusrodah/examples/bootnode/main
-fusrodah/examples/fusrodah/main
-fusrodah/examples/hub/main
-fusrodah/examples/miner/main
-fusrodah/examples/fusrodah_direct/main
 
 # test artifacts
 metrics/config_test.json
@@ -56,3 +45,10 @@ blockchain/package-lock.json
 
 # truffle stores build artifacts here
 blockchain/build
+
+vendor/github.com/golang/mock/mockgen/mockgen
+
+token.txt
+
+keys/state/
+

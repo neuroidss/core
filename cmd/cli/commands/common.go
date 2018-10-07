@@ -4,16 +4,18 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"encoding/json"
-	"errors"
+	"fmt"
+	"math/big"
 	"os"
 	"time"
 
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/mitchellh/go-homedir"
 	"github.com/sonm-io/core/accounts"
 	"github.com/sonm-io/core/cmd/cli/config"
 	"github.com/sonm-io/core/insonmnia/auth"
 	"github.com/sonm-io/core/util"
 	"github.com/spf13/cobra"
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
 
@@ -25,16 +27,28 @@ const (
 	followFlag        = "follow"
 	tailFlag          = "tail"
 	detailsFlag       = "detailed"
+	prependStreamFlag = "source"
+	defaultNodeAddr   = "localhost:15030"
 )
 
 var (
-	rootCmd = &cobra.Command{Use: "sonmcli"}
+	rootCmd = &cobra.Command{
+		Use:           "sonmcli",
+		SilenceErrors: true,
+		SilenceUsage:  true,
+	}
+
 	version string
 
 	// flags var
 	nodeAddressFlag string
-	outputModeFlag  string
-	timeoutFlag     = 60 * time.Second
+	// deprecated: should be replaced with outputModeJSON
+	outputModeFlag string
+	outputModeJSON bool
+	timeoutFlag    = 60 * time.Second
+	insecureFlag   bool
+	keystoreFlag   string
+	configFlag     string
 
 	// logging flag vars
 	logType       string
@@ -43,29 +57,66 @@ var (
 	follow        bool
 	tail          string
 	details       bool
+	prependStream bool
 
 	// session-related vars
-	cfg        config.Config
-	sessionKey *ecdsa.PrivateKey = nil
-	creds      credentials.TransportCredentials
-	walletAuth *util.SelfSignedWallet
-
-	// errors
-	errCannotParsePropsFile = errors.New("cannot parse props file")
+	cfg      = &config.Config{}
+	creds    credentials.TransportCredentials
+	keystore *accounts.MultiKeystore
 )
 
-func init() {
-	rootCmd.PersistentFlags().StringVar(&nodeAddressFlag, "node", "127.0.0.1:9999", "node addr")
-	rootCmd.PersistentFlags().DurationVar(&timeoutFlag, "timeout", 60*time.Second, "Connection timeout")
-	rootCmd.PersistentFlags().StringVar(&outputModeFlag, "out", "", "Output mode: simple or json")
+func getDefaultKey() (*ecdsa.PrivateKey, error) {
+	defaultAddr, err := keystore.GetDefaultAddress()
+	if err != nil {
+		return nil, fmt.Errorf("cannot read default address from keystore: %v", err)
+	}
 
-	rootCmd.AddCommand(hubRootCmd, marketRootCmd, nodeDealsRootCmd, taskRootCmd)
-	rootCmd.AddCommand(loginCmd, approveTokenCmd, getTokenCmd, versionCmd)
+	var pass = cfg.Eth.Passphrase
+	if pass == "" {
+		pass, err = accounts.NewInteractivePassPhraser().GetPassPhrase()
+		if err != nil {
+			return nil, fmt.Errorf("cannot read pass phrase: %v", err)
+		}
+	}
+
+	key, err := keystore.GetKeyWithPass(defaultAddr, pass)
+	if err != nil {
+		return nil, fmt.Errorf("cannot read default key from keystore: %v", err)
+	}
+
+	return key, nil
+}
+
+func init() {
+	cobra.OnInitialize(func() {
+		var err error
+		cfg, err = config.NewConfig(configFlag)
+		if err != nil {
+			fmt.Printf("Cannot load config: %s\r\n", err)
+			os.Exit(1)
+		}
+
+		if outputModeJSON {
+			outputModeFlag = config.OutputModeJSON
+		}
+	})
+
+	rootCmd.PersistentFlags().StringVar(&nodeAddressFlag, "node", "", "node endpoint")
+	rootCmd.PersistentFlags().DurationVar(&timeoutFlag, "timeout", 60*time.Second, "Connection timeout")
+	rootCmd.PersistentFlags().StringVar(&outputModeFlag, "out", "", "Output mode: simple or json (DEPRECATED)")
+	rootCmd.PersistentFlags().BoolVar(&outputModeJSON, "json", false, "Show command output in JSON format")
+	rootCmd.PersistentFlags().BoolVar(&insecureFlag, "insecure", false, "Disable TLS for connection")
+	rootCmd.PersistentFlags().StringVar(&keystoreFlag, "keystore", "", "Keystore dir")
+	rootCmd.PersistentFlags().StringVar(&configFlag, "config", "", "Configuration file")
+
+	rootCmd.AddCommand(workerMgmtCmd, orderRootCmd, dealRootCmd, taskRootCmd, blacklistRootCmd)
+	rootCmd.AddCommand(loginCmd, tokenRootCmd, versionCmd, autoCompleteCmd, masterRootCmd, profileRootCmd)
 }
 
 // Root configure and return root command
-func Root(c config.Config) *cobra.Command {
-	cfg = c
+func Root(appVersion string) *cobra.Command {
+	version = appVersion
+
 	rootCmd.SetOutput(os.Stdout)
 	return rootCmd
 }
@@ -90,43 +141,25 @@ func newCommandError(message string, err error) *commandError {
 	return &commandError{rawErr: err, Message: message}
 }
 
-func showError(cmd *cobra.Command, message string, err error) {
+// ShowError prints message and chained error in requested format
+func ShowError(printer Printer, message string, err error) {
 	if isSimpleFormat() {
-		showErrorInSimple(cmd, message, err)
+		if err != nil {
+			printer.Printf("[ERR] %s: %s\r\n", message, err.Error())
+		} else {
+			printer.Printf("[ERR] %s\r\n", message)
+		}
 	} else {
-		showErrorInJSON(cmd, message, err)
+		printer.Println(newCommandError(message, err).ToJSONString())
 	}
-}
-
-func showErrorInSimple(cmd *cobra.Command, message string, err error) {
-	if err != nil {
-		cmd.Printf("[ERR] %s: %s\r\n", message, err.Error())
-	} else {
-		cmd.Printf("[ERR] %s\r\n", message)
-	}
-}
-
-func showErrorInJSON(cmd *cobra.Command, message string, err error) {
-	jerr := newCommandError(message, err)
-	cmd.Println(jerr.ToJSONString())
 }
 
 func showOk(cmd *cobra.Command) {
 	if isSimpleFormat() {
-		showOkSimple(cmd)
+		cmd.Println("OK")
 	} else {
-		showOkJson(cmd)
+		showJSON(cmd, map[string]string{"status": "OK"})
 	}
-}
-
-func showOkSimple(cmd *cobra.Command) {
-	cmd.Println("OK")
-}
-
-func showOkJson(cmd *cobra.Command) {
-	r := map[string]string{"status": "OK"}
-	j, _ := json.Marshal(r)
-	cmd.Println(string(j))
 }
 
 func isSimpleFormat() bool {
@@ -141,52 +174,103 @@ func isSimpleFormat() bool {
 	return true
 }
 
-// loadKeyStoreWrapper implemented to match cobra.Command.PreRun signature.
-//
-// Function loads and opens keystore. Also, storing opened key in "sessionKey" var
-// to be able to reuse it into cli during one session.
-func loadKeyStoreWrapper(cmd *cobra.Command, _ []string) {
-	ko, err := accounts.DefaultKeyOpener(accounts.NewSilentPrinter(), cfg.KeyStore(), cfg.PassPhrase())
-	if err != nil {
-		showError(cmd, err.Error(), nil)
-		os.Exit(1)
+func nodeAddress() string {
+	p := rootCmd.Flag("node").Value.String()
+	// flag overrides config
+	if p == "" {
+		p = cfg.NodeAddr
+		// config overrides defaults
+		if p == "" {
+			p = defaultNodeAddr
+		}
 	}
 
-	_, err = ko.OpenKeystore()
-	if err != nil {
-		showError(cmd, err.Error(), nil)
-		os.Exit(1)
-	}
-
-	key, err := ko.GetKey()
-	if err != nil {
-		showError(cmd, err.Error(), nil)
-		os.Exit(1)
-	}
-
-	sessionKey = key
-
-	_, TLSConfig, err := util.NewHitlessCertRotator(context.Background(), sessionKey)
-	if err != nil {
-		showError(cmd, err.Error(), nil)
-		os.Exit(1)
-	}
-
-	creds = auth.NewWalletAuthenticator(util.NewTLS(TLSConfig), util.PubKeyToAddr(sessionKey.PublicKey))
-	wallet, err := util.NewSelfSignedWallet(sessionKey)
-	if err != nil {
-		showError(cmd, err.Error(), nil)
-		os.Exit(1)
-	}
-
-	walletAuth = wallet
+	return p
 }
 
-func showJSON(cmd *cobra.Command, s interface{}) {
+func keystorePath() (string, error) {
+	var err error
+	p := rootCmd.Flag("keystore").Value.String()
+	// flag overrides config
+	if p == "" {
+		p = cfg.Eth.Keystore
+		// config overrides defaults ~/.sonm/
+		if p == "" {
+			p, err = util.GetDefaultKeyStoreDir()
+			if err != nil {
+				return "", fmt.Errorf("cannot obtain default keystore dir: %v", err)
+			}
+		}
+	}
+
+	expanded, err := homedir.Expand(p)
+	if err != nil {
+		return "", err
+	}
+
+	return expanded, nil
+}
+
+func initKeystore(reader accounts.PassPhraser) (*accounts.MultiKeystore, error) {
+	keyDir, err := keystorePath()
+	if err != nil {
+		return nil, err
+	}
+
+	return accounts.NewMultiKeystore(&accounts.KeystoreConfig{
+		KeyDir:      keyDir,
+		PassPhrases: make(map[string]string),
+	}, reader)
+}
+
+// loadKeyStoreWrapper is matching cobra.Command.PreRunE signature.
+// It loads default key from the given keystore and keeps the keystore instance
+// in the global variable `keystore` that available for any CLI's sub-commands.
+// Note that the keystore must be loaded before any command's logic it started to execute.
+func loadKeyStoreWrapper(_ *cobra.Command, _ []string) error {
+	var err error
+	keystore, err = initKeystore(accounts.NewInteractivePassPhraser())
+	if err != nil {
+		return fmt.Errorf("cannot init keystore: %v", err)
+	}
+
+	// If an insecure flag is set - we do not require TLS auth.
+	// But we still need to load keys from a store, somewhere keys are used
+	// to sign blockchain transactions, or something like that.
+	if !insecureFlag {
+		sessionKey, err := getDefaultKey()
+		if err != nil {
+			return err
+		}
+
+		_, TLSConfig, err := util.NewHitlessCertRotator(context.Background(), sessionKey)
+		if err != nil {
+			return err
+		}
+
+		creds = auth.NewWalletAuthenticator(util.NewTLS(TLSConfig), crypto.PubkeyToAddress(sessionKey.PublicKey))
+	}
+
+	return nil
+}
+
+func showJSON(cmd Printer, s interface{}) {
 	b, _ := json.Marshal(s)
 	cmd.Printf("%s\r\n", b)
 }
 
-func WithWalletPerRPCCredentials() grpc.DialOption {
-	return grpc.WithPerRPCCredentials(util.NewWalletAccess(walletAuth))
+func newTimeoutContext() (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.Background(), timeoutFlag)
+}
+
+func argsToBigInts(args []string) ([]*big.Int, error) {
+	ints := make([]*big.Int, 0, len(args))
+	for _, idStr := range args {
+		id, err := util.ParseBigInt(idStr)
+		if err != nil {
+			return nil, err
+		}
+		ints = append(ints, id)
+	}
+	return ints, nil
 }

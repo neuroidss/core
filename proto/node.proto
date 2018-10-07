@@ -1,8 +1,12 @@
 syntax = "proto3";
 
-import "deal.proto";
+import "bigint.proto";
+import "container.proto";
+import "dwh.proto";
 import "insonmnia.proto";
-import "hub.proto";
+import "marketplace.proto";
+import "worker.proto";
+import "github.com/prometheus/client_model/metrics.proto";
 
 package sonm;
 
@@ -12,13 +16,16 @@ package sonm;
 
 // TaskManagement describe a bunch of methods
 // to manage tasks running into the SONM network
+// Deprecated: use serviceWorker instead and pass dealID via context
 service TaskManagement {
     // List produces a list of all tasks running on different SONM nodes
     rpc List(TaskListRequest) returns (TaskListReply) {}
     // PushTask pushes image to Worker
     rpc PushTask(stream Chunk) returns (stream Progress) {}
     // Start starts a task on given resource
-    rpc Start(HubStartTaskRequest) returns (HubStartTaskReply) {}
+    rpc Start(StartTaskRequest) returns (StartTaskReply) {}
+    // JoinNetwork provides network specs to join specified task
+    rpc JoinNetwork(JoinNetworkRequest) returns (NetworkSpec) {}
     // Status produces a task status by their ID
     rpc Status(TaskID) returns (TaskStatusReply) {}
     // Logs retrieves a task log (stdin/stderr) from given task
@@ -29,75 +36,152 @@ service TaskManagement {
     rpc PullTask(PullTaskRequest) returns (stream Chunk) {}
 }
 
+message JoinNetworkRequest {
+    TaskID taskID = 1;
+    string NetworkID = 2;
+}
+
 message TaskListRequest {
-    // HubID is hub eth id;
-    // If empty - collect task info from all hubs
-    string hubID = 1;
+    BigInt dealID = 1;
 }
 
 // DealManagement describe a bunch of methods
 // to manage deals made into the SONM network
 service DealManagement {
     // List produces a list of all deals made by client with given ID
-    rpc List(DealListRequest) returns (DealListReply) {}
-    // Status produces a detailed info about deal with given ID
-    rpc Status(ID) returns (Deal) {}
+    rpc List(Count) returns (DealsReply) {}
+    // Status produces a detailed info about deal with given ID.
+    rpc Status(BigInt) returns (DealInfoReply) {}
     // Finish finishes a deal with given ID
-    rpc Finish(ID) returns (Empty) {}
+    // Deprecated: use FinishDeals instead
+    rpc Finish(DealFinishRequest) returns (Empty) {}
+    // FinishDeals finishes deals with given IDs
+    rpc FinishDeals(DealsFinishRequest) returns (ErrorByID) {}
+    // PurgeDeals finishes all deals where client acts as a consumer
+    rpc PurgeDeals(DealsPurgeRequest) returns (ErrorByID) {}
+    // Open tries to open deal between two orders
+    rpc Open(OpenDealRequest) returns (Deal) {}
+    // ChangeRequestsList return change requests for given deal
+    rpc ChangeRequestsList(BigInt) returns (DealChangeRequestsReply) {}
+    // CreateChangeRequest creates new change request for deal
+    rpc CreateChangeRequest(DealChangeRequest) returns (BigInt) {}
+    // ApproveChangeRequest approves change request by their ID
+    rpc ApproveChangeRequest(BigInt) returns (Empty) {}
+    // CancelChangeRequest removes pending change request
+    rpc CancelChangeRequest(BigInt) returns (Empty) {}
+    // QuickBuy places BID order with the same parameters as given ASK order have,
+    // then opens deal with this two orders.
+    rpc QuickBuy(QuickBuyRequest) returns (DealInfoReply) {}
 }
 
-message DealListRequest {
-    string owner = 1;
-    DealStatus status = 2;
+message QuickBuyRequest {
+    BigInt askID = 1;
+    Duration duration = 2;
+    bool force = 3;
 }
 
-message DealListReply {
+message DealFinishRequest {
+    BigInt id = 1;
+    BlacklistType blacklistType = 2;
+}
+
+message DealsFinishRequest {
+    repeated DealFinishRequest dealInfo = 1;
+}
+
+message DealsPurgeRequest {
+    BlacklistType blacklistType = 1;
+}
+message DealsReply {
     repeated Deal deal = 1;
 }
 
-// HubManagement describe a bunch of methods
-// to manage Hub node and their Worker nodes.
-// Must be called by Hub's owner.
-service HubManagement {
-    // Status produse a detailed info about Hub
-    rpc Status (Empty) returns (HubStatusReply) {}
+message OpenDealRequest {
+    BigInt bidID = 1;
+    BigInt askID = 2;
+    bool force = 3;
+}
 
-    // WorkersList prouces a list of connected Workers
-    rpc WorkersList (Empty) returns (ListReply) {}
-    // WorkersStatus produces a detailed info about a Worker with given ID
-    rpc WorkerStatus (ID) returns (InfoReply) {}
+// todo: implement this as part of Node API
+service MasterManagement {
+    // WorkersList returns worker's list for current master address.
+    // List includes already registred workers and pending unapproved requests.
+    rpc WorkersList(EthAddress) returns (WorkerListReply) {}
+    // WorkerConfirm (as master) confirms incoming request for given Worker address.
+    rpc WorkerConfirm(EthAddress) returns (Empty) {}
+    // WorkerRemove (as master) unbinds given Worker address from Master address.
+    rpc WorkerRemove(WorkerRemoveRequest) returns (Empty) {}
+}
 
-    // GetRegisteredWorkers produce a list of Workers IDs allowed
-    // to connect to this hub
-    rpc GetRegisteredWorkers(Empty) returns (GetRegisteredWorkersReply) {}
-    // RegisterWorkers allows Worker with given ID connect to Hub
-    rpc RegisterWorker (ID) returns (Empty) {}
-    // DeregisterWorkers deny Worker with given ID connect to Hub
-    rpc DeregisterWorker (ID) returns (Empty) {}
+message WorkerRemoveRequest {
+    EthAddress master = 1;
+    EthAddress worker = 2;
+}
 
-    // Devices returns list of all available devices that this Hub awares of
-    // with tieir full description.
-    rpc DeviceList(Empty) returns (DevicesReply) {}
-    // GetDeviceProperties allows to obtain previously assigned resource
-    // properties for a given device.
-    rpc GetDeviceProperties(ID) returns (GetDevicePropertiesReply) {}
-    // SetDeviceProperties method allows to specify additional resource
-    // properties for a device specified by its ID.
-    // This may include GPU's capability to execute a well-known work such as
-    // Ethereum mining etc.
-    rpc SetDeviceProperties(SetDevicePropertiesRequest) returns (Empty) {}
+message WorkerListReply {
+    repeated DWHWorker workers = 1;
+}
 
-    // GetAskPlans allows to obtain previously assigned Ask Plans from for a given worker.
-    rpc GetAskPlans(Empty) returns (SlotsReply) {}
-    // CreateAskPlan allows to create rules
-    // for creating Ask orders on Marketplace
-    rpc CreateAskPlan(InsertSlotRequest) returns (ID) {}
-    // RemoveAskPlan allows to remove rules
-    // for creating Ask orders on Marketplace
-    rpc RemoveAskPlan(ID) returns (Empty) {}
+service TokenManagement {
+    // TestTokens increases balance for some amount of test tokens
+    // into live-chian ethereum network.
+    rpc TestTokens(Empty) returns (Empty) {}
+    // Balance provide account balance for live- and side- chains.
+    // Deprecated: use BalanceOf method instead.
+    rpc Balance(Empty) returns (BalanceReply) {}
+    // BalanceOf provide account balance of specified address.
+    rpc BalanceOf(EthAddress) returns (BalanceReply) {}
+    // Deposit transfers funds from masterchain to sidechain
+    rpc Deposit(BigInt) returns (Empty) {}
+    // Withdraw transfers funds from sidechain to masterchain
+    rpc Withdraw(BigInt) returns (Empty) {}
+    // MarketAllowance returns current allowance for BC market
+    rpc MarketAllowance(Empty) returns (BigInt) {}
+    // Transfer transfers funds from one sidechain account to another.
+    rpc Transfer(TokenTransferRequest) returns (Empty) {}
+}
 
-    // List produces a list of all running tasks on the Hub
-    rpc TaskList(Empty) returns (TaskListReply) {}
-    // Status produces a detailed info about task on the Hub
-    rpc TaskStatus(ID) returns (TaskStatusReply) {}
+message BalanceReply {
+    BigInt liveBalance = 1;
+    BigInt sideBalance = 2;
+    BigInt liveEthBalance = 3;
+}
+
+service Blacklist {
+    // List addresses into given blacklist
+    rpc List(EthAddress) returns (BlacklistReply) {}
+    // Remove removes given address from blacklist
+    rpc Remove(EthAddress) returns (Empty) {}
+}
+
+service Profiles {
+    // List allows searching for profiles
+    rpc List(ProfilesRequest) returns (ProfilesReply) {}
+    // Status shows detailed info about given profile
+    rpc Status(EthID) returns (Profile) {}
+    // RemoveAttribute allows to remove profile attributes
+    // for the user's own profile
+    rpc RemoveAttribute(BigInt) returns (Empty) {}
+}
+
+message TokenTransferRequest {
+    EthAddress to = 1;
+    BigInt amount = 2;
+}
+
+service Monitoring {
+    rpc MetricsNPP(Empty) returns (NPPMetricsReply) {}
+}
+
+message NPPMetricsReply {
+    map<string, NamedMetrics> metrics = 1;
+}
+
+message NamedMetrics {
+    repeated NamedMetric metrics = 1;
+}
+
+message NamedMetric {
+    string name = 1;
+    io.prometheus.client.Metric metric = 2;
 }

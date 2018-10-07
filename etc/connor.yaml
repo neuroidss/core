@@ -1,0 +1,146 @@
+node:
+  endpoint: "0x8125721c2413d99a33e351e1f6bb4e56b6b633fd@127.0.0.1:15030"
+
+market:
+  # primary benchmark that used for order placement
+  # and price calculation.
+  benchmark: "gpu-eth-hashrate"
+  from: 15000000
+  to: 300000000
+  step: 500000
+
+  # set counterparty address if you want to place orders
+  # only for specified supplier.
+  # counterparty: 0xD0E743fFDBaEdAa3cf4E3232f3C1aB18ee9ca4aB
+
+  # set to true if Connor should adapt excess orders
+  # (which are not fits in the target set), otherwise, orders will be canceled.
+  # Default: false
+  # adopt_orders: false
+
+  price_control:
+    # what part of the real market price will be used to
+    # create orders on the market
+    marginality: 0.95
+    # price deviation on which order will be replaced
+    # with more profitable one
+    order_replace_threshold: 0.05
+    # price deviation on which price change request will
+    # be sent to the Worker
+    deal_change_request: 0.01
+    # price deviation on which deal will be cancelled
+    # if no change requests was accepted.
+    deal_cancel_threshold: 0.05
+
+  benchmarks:
+    cpu-sysbench-multi: 100
+    cpu-sysbench-single: 100
+    cpu-cores: 1
+    ram-size: 512000000
+    storage-size: 0
+    net-download: 1000000
+    net-upload: 1000000
+    gpu-count: 1
+    gpu-mem: 2900000000
+    gpu-eth-hashrate: 0
+    gpu-cash-hashrate: 0
+    gpu-redshift: 0
+
+# container section describes parameters related
+# to tasks which will be started by Connor on purchased resources.
+container:
+  # Docker image name, can be in the following formats:
+  # `registry.io/user/image:tag`
+  # `user/image:tag`
+  # `user/image@sha256`
+  # `sha256`
+  # Required.
+  image: "sshaman1101/null-miner@sha256:3c339a95746496a03fd3949c74dd92563d89062f1f81c26ba453ba6ea236cbae"
+  # Tag will be attached to the started task, it allows Connor to pick out containers started by himself
+  tag: connor_eth
+  # Container's environment parameters. Can be any key-value strings.
+  # To support dynamically params building immediately before container's starting
+  # you can use "template" variables that will be transformed into real values.
+  # Currently supported only `{DEAL_ID}` variable, see examples below.
+  # Optional.
+  env:
+    WALLET: "0x8125721c2413d99a33e351e1f6bb4e56b6b633fd/c{DEAL_ID}"
+    POOL: "http://eth-eu.dwarfpool.com:80/0x8125721c2413d99a33e351e1f6bb4e56b6b633fd/c{DEAL_ID}"
+
+# price source describes a way to obtain actual price for
+# desired benchmarks.
+price_source:
+  # source type: can be `cmc` for CoinMarkerCap or
+  # `static` for statically defined value.
+  # Required.
+  type: cmc
+  # CoinMarketCap's API URL to load required token price
+  # Required.
+  url: "https://api.coinmarketcap.com/v1/ticker/ethereum/"
+  # Token ID from whattomine.com, can be obtained via API call
+  # or can be found in the URL: https://whattomine.com/coins/151-eth-ethash
+  #                                              like this  ^^^
+  # Currently implemented only Ethereum and Monero price calculation, thus
+  # supported values is 151 for Eth and 101 for Monero.
+  # Required.
+  what_to_mine_id: 151
+  # Interval between price update requests.
+  # Default: 10m
+  # Required.
+  update_interval: 10m
+
+#  type: static
+#  take into consideration that `market.price_control.marginality`
+#  value DOES NOT affects static provider's behaviour.
+#  price: 9200
+
+antifraud:
+  task_quality: 0.75
+  quality_check_interval: 30s
+  blacklist_check_interval: 5m
+  connection_timeout: 60s
+
+  log_processor:
+    format: claymore
+    track_interval: 30s
+    warmup_delay: 5m
+    # EWMA decay factor, seconds
+    decay_time: 900
+
+  pool_processor:
+    format: dwarf
+    track_interval: 1m
+    warmup_delay: 15m
+    # EWMA decay factor, seconds
+    decay_time: 3600
+
+engine:
+  # timeout for connections to external services
+  # default: 30s
+  connection_timeout: 60s
+  # interval between order status updates
+  # default: 10s
+  order_watch_interval: 10s
+  # interval between task starting retries
+  # default: 15s
+  task_start_interval: 15s
+  # connection timeout for task start method,
+  # increase this value if image size is large
+  # default: 3m
+  task_start_timeout: 3m
+  # interval between task status tracking calls
+  # default: 15s
+  task_track_interval: 15s
+  # interval between tasks restoration retries
+  # default: 10s
+  task_restore_interval: 10s
+
+benchmarks:
+  url: "https://raw.githubusercontent.com/sonm-io/benchmarks-list/master/list.json"
+
+ethereum:
+  key_store: "~/go/src/github.com/sonm-io/core/keys"
+  pass_phrase: "any"
+
+log:
+  level: debug

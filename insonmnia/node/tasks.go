@@ -1,119 +1,114 @@
 package node
 
 import (
+	"context"
+	"errors"
+	"fmt"
 	"io"
-
 	"strconv"
 
-	log "github.com/noxiouz/zapctx/ctxlog"
-	pb "github.com/sonm-io/core/proto"
-	"github.com/sonm-io/core/util"
-	"github.com/sonm-io/core/util/xgrpc"
+	"github.com/sonm-io/core/proto"
 	"go.uber.org/zap"
-	"golang.org/x/net/context"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
+//Deprecated, use workerAPI via interceptor
 type tasksAPI struct {
-	ctx     context.Context
 	remotes *remoteOptions
+	log     *zap.SugaredLogger
 }
 
-func (t *tasksAPI) List(ctx context.Context, req *pb.TaskListRequest) (*pb.TaskListReply, error) {
-	// has hubID, can perform direct request
-	if req.GetHubID() != "" {
-		log.G(t.ctx).Info("has HubAddr, performing direct request")
-		hubClient, err := t.getHubClientByEthAddr(ctx, req.GetHubID())
-		if err != nil {
-			return nil, err
-		}
-
-		return hubClient.TaskList(ctx, &pb.Empty{})
+func (t *tasksAPI) List(ctx context.Context, req *sonm.TaskListRequest) (*sonm.TaskListReply, error) {
+	if req.GetDealID() == nil || req.GetDealID().IsZero() {
+		return nil, errors.New("deal ID is required for listing tasks")
 	}
+	t.log.Infow("dealID is provided in request, performing direct request",
+		zap.String("dealID", req.GetDealID().Unwrap().String()))
 
-	myAddr := util.PubKeyToAddr(t.remotes.key.PublicKey)
-	dealIDs, err := t.remotes.eth.GetDeals(myAddr.Hex())
+	dealID := req.GetDealID().Unwrap().String()
+	workerClient, cc, err := t.remotes.getWorkerClientForDeal(ctx, dealID)
 	if err != nil {
 		return nil, err
 	}
-
-	log.G(t.ctx).Info("found some deals", zap.Int("count", len(dealIDs)))
-
-	var activeDeals []*pb.Deal
-	for _, id := range dealIDs {
-		dealInfo, err := t.remotes.eth.GetDealInfo(id)
-		if err != nil {
-			return nil, err
-		}
-
-		// NOTE: status id should be changed
-		if dealInfo.Status == pb.DealStatus_ACCEPTED {
-			activeDeals = append(activeDeals, dealInfo)
-		}
-	}
-
-	log.G(t.ctx).Info("found some active deals", zap.Int("count", len(activeDeals)))
-
-	tasks := make(map[string]*pb.TaskListReply_TaskInfo)
-	for _, deal := range activeDeals {
-		hub, err := t.getHubClientByEthAddr(ctx, deal.GetSupplierID())
-		if err != nil {
-			log.G(t.ctx).Info("cannot resolve hub address",
-				zap.String("hub_eth", deal.GetSupplierID()),
-				zap.Error(err))
-			continue
-		}
-
-		taskList, err := hub.TaskList(ctx, &pb.Empty{})
-		if err != nil {
-			log.G(t.ctx).Info("cannot retrieve tasks from the hub", zap.Error(err))
-			continue
-		}
-
-		for _, v := range taskList.GetInfo() {
-			tasks[deal.GetSupplierID()] = v
-		}
-	}
-
-	return &pb.TaskListReply{Info: tasks}, nil
-}
-
-func (t *tasksAPI) Start(ctx context.Context, req *pb.HubStartTaskRequest) (*pb.HubStartTaskReply, error) {
-	hub, err := t.getHubClientForDeal(ctx, req.Deal.GetId())
+	defer cc.Close()
+	deal, err := workerClient.GetDealInfo(ctx, &sonm.ID{Id: req.GetDealID().Unwrap().String()})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get deal info for deal %s: %s", dealID, err)
 	}
 
-	reply, err := hub.StartTask(ctx, req)
-	if err != nil {
-		return nil, err
+	// merge maps of running and completed tasks
+	reply := &sonm.TaskListReply{
+		Info: make(map[string]*sonm.TaskStatusReply),
+	}
+
+	for id, task := range deal.Completed {
+		reply.Info[id] = task
+	}
+
+	for id, task := range deal.Running {
+		reply.Info[id] = task
 	}
 
 	return reply, nil
 }
 
-func (t *tasksAPI) Status(ctx context.Context, id *pb.TaskID) (*pb.TaskStatusReply, error) {
-	hubClient, err := t.getHubClientByEthAddr(ctx, id.HubAddr)
+func (t *tasksAPI) Start(ctx context.Context, req *sonm.StartTaskRequest) (*sonm.StartTaskReply, error) {
+	dealID := req.GetDealID().Unwrap().String()
+	worker, cc, err := t.remotes.getWorkerClientForDeal(ctx, dealID)
 	if err != nil {
 		return nil, err
 	}
+	defer cc.Close()
 
-	return hubClient.TaskStatus(ctx, &pb.ID{Id: id.Id})
+	reply, err := worker.StartTask(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to start task on worker: %s", err)
+	}
+
+	return reply, nil
 }
 
-func (t *tasksAPI) Logs(req *pb.TaskLogsRequest, srv pb.TaskManagement_LogsServer) error {
-	log.G(t.ctx).Info("handling Logs request", zap.Any("request", req))
+func (t *tasksAPI) JoinNetwork(ctx context.Context, req *sonm.JoinNetworkRequest) (*sonm.NetworkSpec, error) {
+	dealID := req.GetTaskID().GetDealID().Unwrap().String()
+	worker, cc, err := t.remotes.getWorkerClientForDeal(ctx, dealID)
+	if err != nil {
+		return nil, err
+	}
+	defer cc.Close()
 
-	hubClient, err := t.getHubClientByEthAddr(srv.Context(), req.HubAddr)
+	reply, err := worker.JoinNetwork(ctx, &sonm.WorkerJoinNetworkRequest{
+		TaskID:    req.GetTaskID().GetId(),
+		NetworkID: req.GetNetworkID(),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to join network on worker: %s", err)
+	}
+
+	return reply, nil
+}
+
+func (t *tasksAPI) Status(ctx context.Context, id *sonm.TaskID) (*sonm.TaskStatusReply, error) {
+	workerClient, cc, err := t.remotes.getWorkerClientForDeal(ctx, id.GetDealID().Unwrap().String())
+	if err != nil {
+		return nil, err
+	}
+	defer cc.Close()
+
+	return workerClient.TaskStatus(ctx, &sonm.ID{Id: id.GetId()})
+}
+
+func (t *tasksAPI) Logs(req *sonm.TaskLogsRequest, srv sonm.TaskManagement_LogsServer) error {
+	workerClient, cc, err := t.remotes.getWorkerClientForDeal(srv.Context(), req.GetDealID().Unwrap().String())
 	if err != nil {
 		return err
 	}
+	defer cc.Close()
 
-	logClient, err := hubClient.TaskLogs(srv.Context(), req)
+	logClient, err := workerClient.TaskLogs(srv.Context(), req)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to fetch logs from worker: %s", err)
 	}
 
 	for {
@@ -123,41 +118,41 @@ func (t *tasksAPI) Logs(req *pb.TaskLogsRequest, srv pb.TaskManagement_LogsServe
 		}
 
 		if err != nil {
-			return err
+			return fmt.Errorf("failure during receiving logs from worker: %s", err)
 		}
 
 		err = srv.Send(buffer)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to send log chunk request to worker: %s", err)
 		}
 	}
 }
 
-func (t *tasksAPI) Stop(ctx context.Context, id *pb.TaskID) (*pb.Empty, error) {
-	hubClient, err := t.getHubClientByEthAddr(ctx, id.HubAddr)
+func (t *tasksAPI) Stop(ctx context.Context, id *sonm.TaskID) (*sonm.Empty, error) {
+	workerClient, cc, err := t.remotes.getWorkerClientForDeal(ctx, id.GetDealID().Unwrap().String())
 	if err != nil {
 		return nil, err
 	}
+	defer cc.Close()
 
-	return hubClient.StopTask(ctx, &pb.ID{Id: id.Id})
+	return workerClient.StopTask(ctx, &sonm.ID{Id: id.GetId()})
 }
 
-func (t *tasksAPI) PushTask(clientStream pb.TaskManagement_PushTaskServer) error {
+func (t *tasksAPI) PushTask(clientStream sonm.TaskManagement_PushTaskServer) error {
 	meta, err := t.extractStreamMeta(clientStream)
 	if err != nil {
 		return err
 	}
 
-	log.G(t.ctx).Info("handling PushTask request", zap.String("deal_id", meta.dealID))
-
-	hub, err := t.getHubClientForDeal(meta.ctx, meta.dealID)
+	workerClient, cc, err := t.remotes.getWorkerClientForDeal(meta.ctx, meta.dealID)
 	if err != nil {
 		return err
 	}
+	defer cc.Close()
 
-	hubStream, err := hub.PushTask(meta.ctx)
+	workerStream, err := workerClient.PushTask(meta.ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to start task push server on worker: %s", err)
 	}
 
 	bytesCommitted := int64(0)
@@ -169,44 +164,44 @@ func (t *tasksAPI) PushTask(clientStream pb.TaskManagement_PushTaskServer) error
 			chunk, err := clientStream.Recv()
 			if err != nil {
 				if err == io.EOF {
-					log.G(t.ctx).Debug("recieved last push chunk")
+					t.log.Debug("received last push chunk")
 					clientCompleted = true
 				} else {
-					log.G(t.ctx).Debug("recieved push error", zap.Error(err))
-					return err
+					t.log.Debugw("received push error", zap.Error(err))
+					return fmt.Errorf("failed to receive image chunk from client: %s", err)
 				}
 			}
 
 			if chunk == nil {
-				log.G(t.ctx).Debug("closing hub stream")
-				if err := hubStream.CloseSend(); err != nil {
-					return err
+				t.log.Debug("closing worker stream")
+				if err := workerStream.CloseSend(); err != nil {
+					return fmt.Errorf("failed to send closing frame to worker: %s", err)
 				}
 			} else {
 				bytesRemaining = len(chunk.Chunk)
-				if err := hubStream.Send(chunk); err != nil {
-					log.G(t.ctx).Debug("failed to send chunk to hub", zap.Error(err))
-					return err
+				if err := workerStream.Send(chunk); err != nil {
+					t.log.Debugw("failed to send chunk to worker", zap.Error(err))
+					return fmt.Errorf("failed to send chunk to worker: %s", err)
 				}
-				log.G(t.ctx).Debug("sent chunk to hub")
+				t.log.Debug("sent chunk to worker")
 			}
 		}
 
 		for {
-			progress, err := hubStream.Recv()
+			progress, err := workerStream.Recv()
 			if err != nil {
 				if err == io.EOF {
-					log.G(t.ctx).Debug("received last chunk from hub")
+					t.log.Debug("received last chunk from worker")
 					if bytesCommitted == meta.fileSize {
-						clientStream.SetTrailer(hubStream.Trailer())
+						clientStream.SetTrailer(workerStream.Trailer())
 						return nil
 					} else {
-						log.G(t.ctx).Debug("hub closed its stream without committing all bytes")
-						return status.Errorf(codes.Aborted, "hub closed its stream without committing all bytes")
+						t.log.Debug("worker closed its stream without committing all bytes")
+						return status.Errorf(codes.Aborted, "worker closed its stream without committing all bytes")
 					}
 				} else {
-					log.G(t.ctx).Debug("received error from hub", zap.Error(err))
-					return err
+					t.log.Debugw("received error from worker", zap.Error(err))
+					return fmt.Errorf("failed to receive meta info from worker: %s", err)
 				}
 			}
 
@@ -214,8 +209,8 @@ func (t *tasksAPI) PushTask(clientStream pb.TaskManagement_PushTaskServer) error
 			bytesRemaining -= int(progress.Size)
 
 			if err := clientStream.Send(progress); err != nil {
-				log.G(t.ctx).Debug("failed to send chunk back to cli", zap.Error(err))
-				return err
+				t.log.Debugw("failed to send meta to client", zap.Error(err))
+				return fmt.Errorf("failed to send meta to client: %s", err)
 			}
 
 			if bytesRemaining == 0 {
@@ -225,26 +220,27 @@ func (t *tasksAPI) PushTask(clientStream pb.TaskManagement_PushTaskServer) error
 	}
 }
 
-func (t *tasksAPI) PullTask(req *pb.PullTaskRequest, srv pb.TaskManagement_PullTaskServer) error {
+func (t *tasksAPI) PullTask(req *sonm.PullTaskRequest, srv sonm.TaskManagement_PullTaskServer) error {
 	ctx := context.Background()
-	hub, err := t.getHubClientForDeal(ctx, req.GetDealId())
+	worker, cc, err := t.remotes.getWorkerClientForDeal(ctx, req.GetDealId())
 	if err != nil {
 		return err
 	}
+	defer cc.Close()
 
-	pullClient, err := hub.PullTask(ctx, req)
+	pullClient, err := worker.PullTask(ctx, req)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to start task pull server on worker: %s", err)
 	}
 
 	header, err := pullClient.Header()
 	if err != nil {
-		return nil
+		return fmt.Errorf("failed to receive meta from worker: %s", err)
 	}
 
 	err = srv.SetHeader(header)
 	if err != nil {
-		return nil
+		return fmt.Errorf("failed to set meta for client: %s", err)
 	}
 
 	for {
@@ -254,46 +250,16 @@ func (t *tasksAPI) PullTask(req *pb.PullTaskRequest, srv pb.TaskManagement_PullT
 		}
 
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to receive chunk from worker: %s", err)
 		}
 
 		if buffer != nil {
 			err = srv.Send(buffer)
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to send meta to client: %s", err)
 			}
 		}
 	}
-}
-
-func (t *tasksAPI) getHubClientForDeal(ctx context.Context, id string) (pb.HubClient, error) {
-	bigID, err := util.ParseBigInt(id)
-	if err != nil {
-		return nil, err
-	}
-
-	dealInfo, err := t.remotes.eth.GetDealInfo(bigID)
-	if err != nil {
-		return nil, err
-	}
-
-	return t.getHubClientByEthAddr(ctx, dealInfo.GetSupplierID())
-}
-
-func (t *tasksAPI) getHubClientByEthAddr(ctx context.Context, eth string) (pb.HubClient, error) {
-	resolve := &pb.ResolveRequest{EthAddr: eth}
-	addrReply, err := t.remotes.locator.Resolve(ctx, resolve)
-	if err != nil {
-		return nil, err
-	}
-
-	// maybe blocking connection required?
-	cc, err := xgrpc.NewClient(ctx, addrReply.IpAddr[0], t.remotes.creds)
-	if err != nil {
-		return nil, err
-	}
-
-	return pb.NewHubClient(cc), nil
 }
 
 type streamMeta struct {
@@ -302,7 +268,7 @@ type streamMeta struct {
 	fileSize int64
 }
 
-func (t *tasksAPI) extractStreamMeta(clientStream pb.TaskManagement_PushTaskServer) (*streamMeta, error) {
+func (t *tasksAPI) extractStreamMeta(clientStream sonm.TaskManagement_PushTaskServer) (*streamMeta, error) {
 	md, ok := metadata.FromIncomingContext(clientStream.Context())
 	if !ok {
 		return nil, status.Errorf(codes.InvalidArgument, "metadata required")
@@ -332,9 +298,9 @@ func (t *tasksAPI) extractStreamMeta(clientStream pb.TaskManagement_PushTaskServ
 	}, nil
 }
 
-func newTasksAPI(opts *remoteOptions) (pb.TaskManagementServer, error) {
+func newTasksAPI(opts *remoteOptions) sonm.TaskManagementServer {
 	return &tasksAPI{
-		ctx:     opts.ctx,
 		remotes: opts,
-	}, nil
+		log:     opts.log,
+	}
 }

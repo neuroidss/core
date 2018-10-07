@@ -1,11 +1,14 @@
 [Unit]
 Description=SONM Node
+Wants=network-online.target
+After=network.target network-online.target
 
 
 [Service]
 EnvironmentFile=/etc/default/sonm-node
 Type=simple
 ExecStart=/usr/bin/sonmnode --config=${CONFIG_PATH}
+User=sonm
 Restart=on-failure
 
 

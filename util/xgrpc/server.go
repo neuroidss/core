@@ -16,5 +16,15 @@ func NewServer(logger *zap.Logger, extraOpts ...ServerOption) *grpc.Server {
 			grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(opts.interceptors.s...)),
 		}, opts.options...)...,
 	)
+
 	return srv
+}
+
+func Services(server *grpc.Server) []string {
+	var names []string
+	for name := range server.GetServiceInfo() {
+		names = append(names, name)
+	}
+
+	return names
 }

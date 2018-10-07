@@ -1,0 +1,16 @@
+[Unit]
+Description=SONM DWH
+Wants=network-online.target
+After=network.target network-online.target
+
+
+[Service]
+EnvironmentFile=/etc/default/sonm-dwh
+Type=simple
+ExecStart=/usr/bin/sonmdwh --config=${CONFIG_PATH}
+Restart=on-failure
+LimitNOFILE=65535
+
+
+[Install]
+WantedBy=multi-user.target

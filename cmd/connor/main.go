@@ -1,0 +1,53 @@
+package main
+
+import (
+	"fmt"
+
+	"github.com/noxiouz/zapctx/ctxlog"
+	"github.com/sonm-io/core/cmd"
+	"github.com/sonm-io/core/connor"
+	"github.com/sonm-io/core/insonmnia/logging"
+	"github.com/sonm-io/core/util/metrics"
+	"golang.org/x/net/context"
+	"golang.org/x/sync/errgroup"
+)
+
+func main() {
+	cmd.NewCmd(run).Execute()
+}
+
+func run(app cmd.AppContext) error {
+	cfg, err := connor.NewConfig(app.ConfigPath)
+	if err != nil {
+		return fmt.Errorf("failed to load config file: %s", err)
+	}
+
+	log, err := logging.BuildLogger(cfg.Log)
+	if err != nil {
+		return fmt.Errorf("failed to build logger instance: %s", err)
+	}
+
+	ctx := ctxlog.WithLogger(context.Background(), log)
+
+	wg, ctx := errgroup.WithContext(ctx)
+	wg.Go(func() error {
+		return cmd.WaitInterrupted(ctx)
+	})
+	wg.Go(func() error {
+		server, err := connor.New(ctx, cfg, log)
+		if err != nil {
+			return fmt.Errorf("failed to build Connor instance: %s", err)
+		}
+
+		return server.Serve(ctx)
+	})
+	wg.Go(func() error {
+		return metrics.NewPrometheusExporter(cfg.Metrics, metrics.WithLogging(log.Sugar())).Serve(ctx)
+	})
+
+	if err := wg.Wait(); err != nil {
+		return fmt.Errorf("connor termination: %s", err)
+	}
+
+	return nil
+}

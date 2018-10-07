@@ -1,0 +1,23 @@
+grpc_address: ":15021"
+
+http_address: ":15022"
+
+storage:
+  endpoint: "postgresql://localhost:5432/dwh?user=dwh&password=dwh&sslmode=disable"
+
+# blockchain-specific settings.
+ethereum:
+  # path to keystore
+  key_store: "./keys"
+  # passphrase for keystore
+  pass_phrase: "any"
+
+blockchain:
+  blocks_batch_size: 500000
+
+logging:
+  # The desired logging level.
+  # Allowed values are "debug", "info", "warn", "error", "panic" and "fatal"
+  level: "info"
+
+enable_rest: true

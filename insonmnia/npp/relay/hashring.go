@@ -1,0 +1,157 @@
+// This module describes the consistent hash ring used to distribute the relay
+// load between multiple discovered servers.
+//
+// The Continuum evolution.
+// 1. [ | | | | | | | | | | | | | | | | ]
+// 2. [ | | | |x| | | | | |x| | | | |x| ]
+// 3. [ | | | |x| | |K| | |x| | | |U|x| ]
+// 4. [v| | | |x| | |K| |v|x| | |v|U|x| ]
+// 5. [v| | | | | | |K| |v| | | |v|U| | ]
+//
+// 1. Initial continuum.
+// 2. After inserting node "x".
+// 3. Discovering both key "K" and "U" results in "x".
+// 4. After inserting another node "v" discovering result of key "U" left the
+// same while discovering key "K" now results in node "v".
+// Then K needs to be rediscovered, while U doesn't.
+// 5. Removing node "x" results in "U" discovering, but it's done
+// automatically, since leaving from the group usually means that the node is
+// shutting down.
+
+package relay
+
+import (
+	"fmt"
+	"strings"
+	"sync"
+
+	"github.com/serialx/hashring"
+	"github.com/sonm-io/core/insonmnia/npp/nppc"
+)
+
+type continuum struct {
+	mu        sync.RWMutex
+	continuum *hashring.HashRing
+	tracking  map[nppc.ResourceID]string
+}
+
+func newContinuum() *continuum {
+	return &continuum{
+		continuum: hashring.New([]string{}),
+	}
+}
+
+// Add adds a new weighted node into the continuum, returning list of ETH
+// addresses that are need to be rescheduled.
+func (m *continuum) Add(node string, weight int) []nppc.ResourceID {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.continuum = m.continuum.AddNode(node)
+
+	return m.scanTrackingChanges()
+}
+
+// Track starts tracking the given address.
+//
+// When a new node is inserted into the continuum the Add method returns the
+// list of addresses that must be rescheduled.
+func (m *continuum) Track(addr nppc.ResourceID) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	node, ok := m.continuum.GetNode(addr.String())
+	if ok {
+		m.tracking[addr] = node
+	} else {
+		m.tracking[addr] = ""
+	}
+}
+
+// StopServerTracking stops tracking the given server connection described by ID.
+func (m *continuum) StopServerTracking(addr nppc.ResourceID) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	delete(m.tracking, addr)
+}
+
+// Remove removes the specified node from the continuum
+func (m *continuum) Remove(node string) []nppc.ResourceID {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.continuum = m.continuum.RemoveNode(node)
+
+	return m.scanTrackingChanges()
+}
+
+func (m *continuum) scanTrackingChanges() []nppc.ResourceID {
+	addrs := make([]nppc.ResourceID, 0)
+	tracking := make(map[nppc.ResourceID]string, 0)
+
+	for addr, trackedNode := range m.tracking {
+		node, ok := m.continuum.GetNode(addr.String())
+		if ok && node != trackedNode {
+			addrs = append(addrs, addr)
+		}
+
+		tracking[addr] = node
+	}
+
+	m.tracking = tracking
+	return addrs
+}
+
+func (m *continuum) get(addr nppc.ResourceID) (string, bool) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.continuum.GetNode(addr.String())
+}
+
+// GetNode returns a node that will serve the specified ETH address.
+func (m *continuum) GetNode(addr nppc.ResourceID) (*Node, error) {
+	node, ok := m.get(addr)
+	if !ok {
+		return nil, errEmptyContinuum()
+	}
+
+	return ParseNode(node)
+}
+
+// Node represents a node point on the Continuum.
+type Node struct {
+	Name string
+	Addr string
+}
+
+func newNode(name, addr string) (*Node, error) {
+	if len(name) == 0 {
+		return nil, fmt.Errorf("node name is empty")
+	}
+	if len(addr) == 0 {
+		return nil, fmt.Errorf("node address is empty")
+	}
+
+	m := &Node{
+		Name: name,
+		Addr: addr,
+	}
+
+	return m, nil
+}
+
+func ParseNode(node string) (*Node, error) {
+	idx := strings.LastIndex(node, "@")
+	if idx < 0 {
+		return nil, fmt.Errorf("continuum node must be in `<name>@<addr>` format")
+	}
+
+	name, addr := node[:idx], node[idx+1:]
+
+	return newNode(name, addr)
+}
+
+func (m *Node) String() string {
+	return fmt.Sprintf("%s@%s", m.Name, m.Addr)
+}

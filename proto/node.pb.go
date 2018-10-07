@@ -6,6 +6,7 @@ package sonm
 import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"
 import math "math"
+import io_prometheus_client "github.com/prometheus/client_model/go"
 
 import (
 	context "golang.org/x/net/context"
@@ -17,68 +18,350 @@ var _ = proto.Marshal
 var _ = fmt.Errorf
 var _ = math.Inf
 
+type JoinNetworkRequest struct {
+	TaskID    *TaskID `protobuf:"bytes,1,opt,name=taskID" json:"taskID,omitempty"`
+	NetworkID string  `protobuf:"bytes,2,opt,name=NetworkID" json:"NetworkID,omitempty"`
+}
+
+func (m *JoinNetworkRequest) Reset()                    { *m = JoinNetworkRequest{} }
+func (m *JoinNetworkRequest) String() string            { return proto.CompactTextString(m) }
+func (*JoinNetworkRequest) ProtoMessage()               {}
+func (*JoinNetworkRequest) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{0} }
+
+func (m *JoinNetworkRequest) GetTaskID() *TaskID {
+	if m != nil {
+		return m.TaskID
+	}
+	return nil
+}
+
+func (m *JoinNetworkRequest) GetNetworkID() string {
+	if m != nil {
+		return m.NetworkID
+	}
+	return ""
+}
+
 type TaskListRequest struct {
-	// HubID is hub eth id;
-	// If empty - collect task info from all hubs
-	HubID string `protobuf:"bytes,1,opt,name=hubID" json:"hubID,omitempty"`
+	DealID *BigInt `protobuf:"bytes,1,opt,name=dealID" json:"dealID,omitempty"`
 }
 
 func (m *TaskListRequest) Reset()                    { *m = TaskListRequest{} }
 func (m *TaskListRequest) String() string            { return proto.CompactTextString(m) }
 func (*TaskListRequest) ProtoMessage()               {}
-func (*TaskListRequest) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{0} }
+func (*TaskListRequest) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{1} }
 
-func (m *TaskListRequest) GetHubID() string {
+func (m *TaskListRequest) GetDealID() *BigInt {
 	if m != nil {
-		return m.HubID
+		return m.DealID
 	}
-	return ""
+	return nil
 }
 
-type DealListRequest struct {
-	Owner  string     `protobuf:"bytes,1,opt,name=owner" json:"owner,omitempty"`
-	Status DealStatus `protobuf:"varint,2,opt,name=status,enum=sonm.DealStatus" json:"status,omitempty"`
+type QuickBuyRequest struct {
+	AskID    *BigInt   `protobuf:"bytes,1,opt,name=askID" json:"askID,omitempty"`
+	Duration *Duration `protobuf:"bytes,2,opt,name=duration" json:"duration,omitempty"`
+	Force    bool      `protobuf:"varint,3,opt,name=force" json:"force,omitempty"`
 }
 
-func (m *DealListRequest) Reset()                    { *m = DealListRequest{} }
-func (m *DealListRequest) String() string            { return proto.CompactTextString(m) }
-func (*DealListRequest) ProtoMessage()               {}
-func (*DealListRequest) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{1} }
+func (m *QuickBuyRequest) Reset()                    { *m = QuickBuyRequest{} }
+func (m *QuickBuyRequest) String() string            { return proto.CompactTextString(m) }
+func (*QuickBuyRequest) ProtoMessage()               {}
+func (*QuickBuyRequest) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{2} }
 
-func (m *DealListRequest) GetOwner() string {
+func (m *QuickBuyRequest) GetAskID() *BigInt {
 	if m != nil {
-		return m.Owner
+		return m.AskID
 	}
-	return ""
+	return nil
 }
 
-func (m *DealListRequest) GetStatus() DealStatus {
+func (m *QuickBuyRequest) GetDuration() *Duration {
 	if m != nil {
-		return m.Status
+		return m.Duration
 	}
-	return DealStatus_ANY_STATUS
+	return nil
 }
 
-type DealListReply struct {
+func (m *QuickBuyRequest) GetForce() bool {
+	if m != nil {
+		return m.Force
+	}
+	return false
+}
+
+type DealFinishRequest struct {
+	Id            *BigInt       `protobuf:"bytes,1,opt,name=id" json:"id,omitempty"`
+	BlacklistType BlacklistType `protobuf:"varint,2,opt,name=blacklistType,enum=sonm.BlacklistType" json:"blacklistType,omitempty"`
+}
+
+func (m *DealFinishRequest) Reset()                    { *m = DealFinishRequest{} }
+func (m *DealFinishRequest) String() string            { return proto.CompactTextString(m) }
+func (*DealFinishRequest) ProtoMessage()               {}
+func (*DealFinishRequest) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{3} }
+
+func (m *DealFinishRequest) GetId() *BigInt {
+	if m != nil {
+		return m.Id
+	}
+	return nil
+}
+
+func (m *DealFinishRequest) GetBlacklistType() BlacklistType {
+	if m != nil {
+		return m.BlacklistType
+	}
+	return BlacklistType_BLACKLIST_NOBODY
+}
+
+type DealsFinishRequest struct {
+	DealInfo []*DealFinishRequest `protobuf:"bytes,1,rep,name=dealInfo" json:"dealInfo,omitempty"`
+}
+
+func (m *DealsFinishRequest) Reset()                    { *m = DealsFinishRequest{} }
+func (m *DealsFinishRequest) String() string            { return proto.CompactTextString(m) }
+func (*DealsFinishRequest) ProtoMessage()               {}
+func (*DealsFinishRequest) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{4} }
+
+func (m *DealsFinishRequest) GetDealInfo() []*DealFinishRequest {
+	if m != nil {
+		return m.DealInfo
+	}
+	return nil
+}
+
+type DealsPurgeRequest struct {
+	BlacklistType BlacklistType `protobuf:"varint,1,opt,name=blacklistType,enum=sonm.BlacklistType" json:"blacklistType,omitempty"`
+}
+
+func (m *DealsPurgeRequest) Reset()                    { *m = DealsPurgeRequest{} }
+func (m *DealsPurgeRequest) String() string            { return proto.CompactTextString(m) }
+func (*DealsPurgeRequest) ProtoMessage()               {}
+func (*DealsPurgeRequest) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{5} }
+
+func (m *DealsPurgeRequest) GetBlacklistType() BlacklistType {
+	if m != nil {
+		return m.BlacklistType
+	}
+	return BlacklistType_BLACKLIST_NOBODY
+}
+
+type DealsReply struct {
 	Deal []*Deal `protobuf:"bytes,1,rep,name=deal" json:"deal,omitempty"`
 }
 
-func (m *DealListReply) Reset()                    { *m = DealListReply{} }
-func (m *DealListReply) String() string            { return proto.CompactTextString(m) }
-func (*DealListReply) ProtoMessage()               {}
-func (*DealListReply) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{2} }
+func (m *DealsReply) Reset()                    { *m = DealsReply{} }
+func (m *DealsReply) String() string            { return proto.CompactTextString(m) }
+func (*DealsReply) ProtoMessage()               {}
+func (*DealsReply) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{6} }
 
-func (m *DealListReply) GetDeal() []*Deal {
+func (m *DealsReply) GetDeal() []*Deal {
 	if m != nil {
 		return m.Deal
 	}
 	return nil
 }
 
+type OpenDealRequest struct {
+	BidID *BigInt `protobuf:"bytes,1,opt,name=bidID" json:"bidID,omitempty"`
+	AskID *BigInt `protobuf:"bytes,2,opt,name=askID" json:"askID,omitempty"`
+	Force bool    `protobuf:"varint,3,opt,name=force" json:"force,omitempty"`
+}
+
+func (m *OpenDealRequest) Reset()                    { *m = OpenDealRequest{} }
+func (m *OpenDealRequest) String() string            { return proto.CompactTextString(m) }
+func (*OpenDealRequest) ProtoMessage()               {}
+func (*OpenDealRequest) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{7} }
+
+func (m *OpenDealRequest) GetBidID() *BigInt {
+	if m != nil {
+		return m.BidID
+	}
+	return nil
+}
+
+func (m *OpenDealRequest) GetAskID() *BigInt {
+	if m != nil {
+		return m.AskID
+	}
+	return nil
+}
+
+func (m *OpenDealRequest) GetForce() bool {
+	if m != nil {
+		return m.Force
+	}
+	return false
+}
+
+type WorkerRemoveRequest struct {
+	Master *EthAddress `protobuf:"bytes,1,opt,name=master" json:"master,omitempty"`
+	Worker *EthAddress `protobuf:"bytes,2,opt,name=worker" json:"worker,omitempty"`
+}
+
+func (m *WorkerRemoveRequest) Reset()                    { *m = WorkerRemoveRequest{} }
+func (m *WorkerRemoveRequest) String() string            { return proto.CompactTextString(m) }
+func (*WorkerRemoveRequest) ProtoMessage()               {}
+func (*WorkerRemoveRequest) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{8} }
+
+func (m *WorkerRemoveRequest) GetMaster() *EthAddress {
+	if m != nil {
+		return m.Master
+	}
+	return nil
+}
+
+func (m *WorkerRemoveRequest) GetWorker() *EthAddress {
+	if m != nil {
+		return m.Worker
+	}
+	return nil
+}
+
+type WorkerListReply struct {
+	Workers []*DWHWorker `protobuf:"bytes,1,rep,name=workers" json:"workers,omitempty"`
+}
+
+func (m *WorkerListReply) Reset()                    { *m = WorkerListReply{} }
+func (m *WorkerListReply) String() string            { return proto.CompactTextString(m) }
+func (*WorkerListReply) ProtoMessage()               {}
+func (*WorkerListReply) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{9} }
+
+func (m *WorkerListReply) GetWorkers() []*DWHWorker {
+	if m != nil {
+		return m.Workers
+	}
+	return nil
+}
+
+type BalanceReply struct {
+	LiveBalance    *BigInt `protobuf:"bytes,1,opt,name=liveBalance" json:"liveBalance,omitempty"`
+	SideBalance    *BigInt `protobuf:"bytes,2,opt,name=sideBalance" json:"sideBalance,omitempty"`
+	LiveEthBalance *BigInt `protobuf:"bytes,3,opt,name=liveEthBalance" json:"liveEthBalance,omitempty"`
+}
+
+func (m *BalanceReply) Reset()                    { *m = BalanceReply{} }
+func (m *BalanceReply) String() string            { return proto.CompactTextString(m) }
+func (*BalanceReply) ProtoMessage()               {}
+func (*BalanceReply) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{10} }
+
+func (m *BalanceReply) GetLiveBalance() *BigInt {
+	if m != nil {
+		return m.LiveBalance
+	}
+	return nil
+}
+
+func (m *BalanceReply) GetSideBalance() *BigInt {
+	if m != nil {
+		return m.SideBalance
+	}
+	return nil
+}
+
+func (m *BalanceReply) GetLiveEthBalance() *BigInt {
+	if m != nil {
+		return m.LiveEthBalance
+	}
+	return nil
+}
+
+type TokenTransferRequest struct {
+	To     *EthAddress `protobuf:"bytes,1,opt,name=to" json:"to,omitempty"`
+	Amount *BigInt     `protobuf:"bytes,2,opt,name=amount" json:"amount,omitempty"`
+}
+
+func (m *TokenTransferRequest) Reset()                    { *m = TokenTransferRequest{} }
+func (m *TokenTransferRequest) String() string            { return proto.CompactTextString(m) }
+func (*TokenTransferRequest) ProtoMessage()               {}
+func (*TokenTransferRequest) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{11} }
+
+func (m *TokenTransferRequest) GetTo() *EthAddress {
+	if m != nil {
+		return m.To
+	}
+	return nil
+}
+
+func (m *TokenTransferRequest) GetAmount() *BigInt {
+	if m != nil {
+		return m.Amount
+	}
+	return nil
+}
+
+type NPPMetricsReply struct {
+	Metrics map[string]*NamedMetrics `protobuf:"bytes,1,rep,name=metrics" json:"metrics,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+}
+
+func (m *NPPMetricsReply) Reset()                    { *m = NPPMetricsReply{} }
+func (m *NPPMetricsReply) String() string            { return proto.CompactTextString(m) }
+func (*NPPMetricsReply) ProtoMessage()               {}
+func (*NPPMetricsReply) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{12} }
+
+func (m *NPPMetricsReply) GetMetrics() map[string]*NamedMetrics {
+	if m != nil {
+		return m.Metrics
+	}
+	return nil
+}
+
+type NamedMetrics struct {
+	Metrics []*NamedMetric `protobuf:"bytes,1,rep,name=metrics" json:"metrics,omitempty"`
+}
+
+func (m *NamedMetrics) Reset()                    { *m = NamedMetrics{} }
+func (m *NamedMetrics) String() string            { return proto.CompactTextString(m) }
+func (*NamedMetrics) ProtoMessage()               {}
+func (*NamedMetrics) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{13} }
+
+func (m *NamedMetrics) GetMetrics() []*NamedMetric {
+	if m != nil {
+		return m.Metrics
+	}
+	return nil
+}
+
+type NamedMetric struct {
+	Name   string                       `protobuf:"bytes,1,opt,name=name" json:"name,omitempty"`
+	Metric *io_prometheus_client.Metric `protobuf:"bytes,2,opt,name=metric" json:"metric,omitempty"`
+}
+
+func (m *NamedMetric) Reset()                    { *m = NamedMetric{} }
+func (m *NamedMetric) String() string            { return proto.CompactTextString(m) }
+func (*NamedMetric) ProtoMessage()               {}
+func (*NamedMetric) Descriptor() ([]byte, []int) { return fileDescriptor9, []int{14} }
+
+func (m *NamedMetric) GetName() string {
+	if m != nil {
+		return m.Name
+	}
+	return ""
+}
+
+func (m *NamedMetric) GetMetric() *io_prometheus_client.Metric {
+	if m != nil {
+		return m.Metric
+	}
+	return nil
+}
+
 func init() {
+	proto.RegisterType((*JoinNetworkRequest)(nil), "sonm.JoinNetworkRequest")
 	proto.RegisterType((*TaskListRequest)(nil), "sonm.TaskListRequest")
-	proto.RegisterType((*DealListRequest)(nil), "sonm.DealListRequest")
-	proto.RegisterType((*DealListReply)(nil), "sonm.DealListReply")
+	proto.RegisterType((*QuickBuyRequest)(nil), "sonm.QuickBuyRequest")
+	proto.RegisterType((*DealFinishRequest)(nil), "sonm.DealFinishRequest")
+	proto.RegisterType((*DealsFinishRequest)(nil), "sonm.DealsFinishRequest")
+	proto.RegisterType((*DealsPurgeRequest)(nil), "sonm.DealsPurgeRequest")
+	proto.RegisterType((*DealsReply)(nil), "sonm.DealsReply")
+	proto.RegisterType((*OpenDealRequest)(nil), "sonm.OpenDealRequest")
+	proto.RegisterType((*WorkerRemoveRequest)(nil), "sonm.WorkerRemoveRequest")
+	proto.RegisterType((*WorkerListReply)(nil), "sonm.WorkerListReply")
+	proto.RegisterType((*BalanceReply)(nil), "sonm.BalanceReply")
+	proto.RegisterType((*TokenTransferRequest)(nil), "sonm.TokenTransferRequest")
+	proto.RegisterType((*NPPMetricsReply)(nil), "sonm.NPPMetricsReply")
+	proto.RegisterType((*NamedMetrics)(nil), "sonm.NamedMetrics")
+	proto.RegisterType((*NamedMetric)(nil), "sonm.NamedMetric")
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -97,7 +380,9 @@ type TaskManagementClient interface {
 	// PushTask pushes image to Worker
 	PushTask(ctx context.Context, opts ...grpc.CallOption) (TaskManagement_PushTaskClient, error)
 	// Start starts a task on given resource
-	Start(ctx context.Context, in *HubStartTaskRequest, opts ...grpc.CallOption) (*HubStartTaskReply, error)
+	Start(ctx context.Context, in *StartTaskRequest, opts ...grpc.CallOption) (*StartTaskReply, error)
+	// JoinNetwork provides network specs to join specified task
+	JoinNetwork(ctx context.Context, in *JoinNetworkRequest, opts ...grpc.CallOption) (*NetworkSpec, error)
 	// Status produces a task status by their ID
 	Status(ctx context.Context, in *TaskID, opts ...grpc.CallOption) (*TaskStatusReply, error)
 	// Logs retrieves a task log (stdin/stderr) from given task
@@ -156,9 +441,18 @@ func (x *taskManagementPushTaskClient) Recv() (*Progress, error) {
 	return m, nil
 }
 
-func (c *taskManagementClient) Start(ctx context.Context, in *HubStartTaskRequest, opts ...grpc.CallOption) (*HubStartTaskReply, error) {
-	out := new(HubStartTaskReply)
+func (c *taskManagementClient) Start(ctx context.Context, in *StartTaskRequest, opts ...grpc.CallOption) (*StartTaskReply, error) {
+	out := new(StartTaskReply)
 	err := grpc.Invoke(ctx, "/sonm.TaskManagement/Start", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *taskManagementClient) JoinNetwork(ctx context.Context, in *JoinNetworkRequest, opts ...grpc.CallOption) (*NetworkSpec, error) {
+	out := new(NetworkSpec)
+	err := grpc.Invoke(ctx, "/sonm.TaskManagement/JoinNetwork", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -255,7 +549,9 @@ type TaskManagementServer interface {
 	// PushTask pushes image to Worker
 	PushTask(TaskManagement_PushTaskServer) error
 	// Start starts a task on given resource
-	Start(context.Context, *HubStartTaskRequest) (*HubStartTaskReply, error)
+	Start(context.Context, *StartTaskRequest) (*StartTaskReply, error)
+	// JoinNetwork provides network specs to join specified task
+	JoinNetwork(context.Context, *JoinNetworkRequest) (*NetworkSpec, error)
 	// Status produces a task status by their ID
 	Status(context.Context, *TaskID) (*TaskStatusReply, error)
 	// Logs retrieves a task log (stdin/stderr) from given task
@@ -315,7 +611,7 @@ func (x *taskManagementPushTaskServer) Recv() (*Chunk, error) {
 }
 
 func _TaskManagement_Start_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(HubStartTaskRequest)
+	in := new(StartTaskRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -327,7 +623,25 @@ func _TaskManagement_Start_Handler(srv interface{}, ctx context.Context, dec fun
 		FullMethod: "/sonm.TaskManagement/Start",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(TaskManagementServer).Start(ctx, req.(*HubStartTaskRequest))
+		return srv.(TaskManagementServer).Start(ctx, req.(*StartTaskRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TaskManagement_JoinNetwork_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(JoinNetworkRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TaskManagementServer).JoinNetwork(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/sonm.TaskManagement/JoinNetwork",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TaskManagementServer).JoinNetwork(ctx, req.(*JoinNetworkRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -423,6 +737,10 @@ var _TaskManagement_serviceDesc = grpc.ServiceDesc{
 			Handler:    _TaskManagement_Start_Handler,
 		},
 		{
+			MethodName: "JoinNetwork",
+			Handler:    _TaskManagement_JoinNetwork_Handler,
+		},
+		{
 			MethodName: "Status",
 			Handler:    _TaskManagement_Status_Handler,
 		},
@@ -456,11 +774,29 @@ var _TaskManagement_serviceDesc = grpc.ServiceDesc{
 
 type DealManagementClient interface {
 	// List produces a list of all deals made by client with given ID
-	List(ctx context.Context, in *DealListRequest, opts ...grpc.CallOption) (*DealListReply, error)
-	// Status produces a detailed info about deal with given ID
-	Status(ctx context.Context, in *ID, opts ...grpc.CallOption) (*Deal, error)
+	List(ctx context.Context, in *Count, opts ...grpc.CallOption) (*DealsReply, error)
+	// Status produces a detailed info about deal with given ID.
+	Status(ctx context.Context, in *BigInt, opts ...grpc.CallOption) (*DealInfoReply, error)
 	// Finish finishes a deal with given ID
-	Finish(ctx context.Context, in *ID, opts ...grpc.CallOption) (*Empty, error)
+	// Deprecated: use FinishDeals instead
+	Finish(ctx context.Context, in *DealFinishRequest, opts ...grpc.CallOption) (*Empty, error)
+	// FinishDeals finishes deals with given IDs
+	FinishDeals(ctx context.Context, in *DealsFinishRequest, opts ...grpc.CallOption) (*ErrorByID, error)
+	// PurgeDeals finishes all deals where client acts as a consumer
+	PurgeDeals(ctx context.Context, in *DealsPurgeRequest, opts ...grpc.CallOption) (*ErrorByID, error)
+	// Open tries to open deal between two orders
+	Open(ctx context.Context, in *OpenDealRequest, opts ...grpc.CallOption) (*Deal, error)
+	// ChangeRequestsList return change requests for given deal
+	ChangeRequestsList(ctx context.Context, in *BigInt, opts ...grpc.CallOption) (*DealChangeRequestsReply, error)
+	// CreateChangeRequest creates new change request for deal
+	CreateChangeRequest(ctx context.Context, in *DealChangeRequest, opts ...grpc.CallOption) (*BigInt, error)
+	// ApproveChangeRequest approves change request by their ID
+	ApproveChangeRequest(ctx context.Context, in *BigInt, opts ...grpc.CallOption) (*Empty, error)
+	// CancelChangeRequest removes pending change request
+	CancelChangeRequest(ctx context.Context, in *BigInt, opts ...grpc.CallOption) (*Empty, error)
+	// QuickBuy places BID order with the same parameters as given ASK order have,
+	// then opens deal with this two orders.
+	QuickBuy(ctx context.Context, in *QuickBuyRequest, opts ...grpc.CallOption) (*DealInfoReply, error)
 }
 
 type dealManagementClient struct {
@@ -471,8 +807,8 @@ func NewDealManagementClient(cc *grpc.ClientConn) DealManagementClient {
 	return &dealManagementClient{cc}
 }
 
-func (c *dealManagementClient) List(ctx context.Context, in *DealListRequest, opts ...grpc.CallOption) (*DealListReply, error) {
-	out := new(DealListReply)
+func (c *dealManagementClient) List(ctx context.Context, in *Count, opts ...grpc.CallOption) (*DealsReply, error) {
+	out := new(DealsReply)
 	err := grpc.Invoke(ctx, "/sonm.DealManagement/List", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
@@ -480,8 +816,8 @@ func (c *dealManagementClient) List(ctx context.Context, in *DealListRequest, op
 	return out, nil
 }
 
-func (c *dealManagementClient) Status(ctx context.Context, in *ID, opts ...grpc.CallOption) (*Deal, error) {
-	out := new(Deal)
+func (c *dealManagementClient) Status(ctx context.Context, in *BigInt, opts ...grpc.CallOption) (*DealInfoReply, error) {
+	out := new(DealInfoReply)
 	err := grpc.Invoke(ctx, "/sonm.DealManagement/Status", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
@@ -489,9 +825,81 @@ func (c *dealManagementClient) Status(ctx context.Context, in *ID, opts ...grpc.
 	return out, nil
 }
 
-func (c *dealManagementClient) Finish(ctx context.Context, in *ID, opts ...grpc.CallOption) (*Empty, error) {
+func (c *dealManagementClient) Finish(ctx context.Context, in *DealFinishRequest, opts ...grpc.CallOption) (*Empty, error) {
 	out := new(Empty)
 	err := grpc.Invoke(ctx, "/sonm.DealManagement/Finish", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dealManagementClient) FinishDeals(ctx context.Context, in *DealsFinishRequest, opts ...grpc.CallOption) (*ErrorByID, error) {
+	out := new(ErrorByID)
+	err := grpc.Invoke(ctx, "/sonm.DealManagement/FinishDeals", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dealManagementClient) PurgeDeals(ctx context.Context, in *DealsPurgeRequest, opts ...grpc.CallOption) (*ErrorByID, error) {
+	out := new(ErrorByID)
+	err := grpc.Invoke(ctx, "/sonm.DealManagement/PurgeDeals", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dealManagementClient) Open(ctx context.Context, in *OpenDealRequest, opts ...grpc.CallOption) (*Deal, error) {
+	out := new(Deal)
+	err := grpc.Invoke(ctx, "/sonm.DealManagement/Open", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dealManagementClient) ChangeRequestsList(ctx context.Context, in *BigInt, opts ...grpc.CallOption) (*DealChangeRequestsReply, error) {
+	out := new(DealChangeRequestsReply)
+	err := grpc.Invoke(ctx, "/sonm.DealManagement/ChangeRequestsList", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dealManagementClient) CreateChangeRequest(ctx context.Context, in *DealChangeRequest, opts ...grpc.CallOption) (*BigInt, error) {
+	out := new(BigInt)
+	err := grpc.Invoke(ctx, "/sonm.DealManagement/CreateChangeRequest", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dealManagementClient) ApproveChangeRequest(ctx context.Context, in *BigInt, opts ...grpc.CallOption) (*Empty, error) {
+	out := new(Empty)
+	err := grpc.Invoke(ctx, "/sonm.DealManagement/ApproveChangeRequest", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dealManagementClient) CancelChangeRequest(ctx context.Context, in *BigInt, opts ...grpc.CallOption) (*Empty, error) {
+	out := new(Empty)
+	err := grpc.Invoke(ctx, "/sonm.DealManagement/CancelChangeRequest", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *dealManagementClient) QuickBuy(ctx context.Context, in *QuickBuyRequest, opts ...grpc.CallOption) (*DealInfoReply, error) {
+	out := new(DealInfoReply)
+	err := grpc.Invoke(ctx, "/sonm.DealManagement/QuickBuy", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -502,11 +910,29 @@ func (c *dealManagementClient) Finish(ctx context.Context, in *ID, opts ...grpc.
 
 type DealManagementServer interface {
 	// List produces a list of all deals made by client with given ID
-	List(context.Context, *DealListRequest) (*DealListReply, error)
-	// Status produces a detailed info about deal with given ID
-	Status(context.Context, *ID) (*Deal, error)
+	List(context.Context, *Count) (*DealsReply, error)
+	// Status produces a detailed info about deal with given ID.
+	Status(context.Context, *BigInt) (*DealInfoReply, error)
 	// Finish finishes a deal with given ID
-	Finish(context.Context, *ID) (*Empty, error)
+	// Deprecated: use FinishDeals instead
+	Finish(context.Context, *DealFinishRequest) (*Empty, error)
+	// FinishDeals finishes deals with given IDs
+	FinishDeals(context.Context, *DealsFinishRequest) (*ErrorByID, error)
+	// PurgeDeals finishes all deals where client acts as a consumer
+	PurgeDeals(context.Context, *DealsPurgeRequest) (*ErrorByID, error)
+	// Open tries to open deal between two orders
+	Open(context.Context, *OpenDealRequest) (*Deal, error)
+	// ChangeRequestsList return change requests for given deal
+	ChangeRequestsList(context.Context, *BigInt) (*DealChangeRequestsReply, error)
+	// CreateChangeRequest creates new change request for deal
+	CreateChangeRequest(context.Context, *DealChangeRequest) (*BigInt, error)
+	// ApproveChangeRequest approves change request by their ID
+	ApproveChangeRequest(context.Context, *BigInt) (*Empty, error)
+	// CancelChangeRequest removes pending change request
+	CancelChangeRequest(context.Context, *BigInt) (*Empty, error)
+	// QuickBuy places BID order with the same parameters as given ASK order have,
+	// then opens deal with this two orders.
+	QuickBuy(context.Context, *QuickBuyRequest) (*DealInfoReply, error)
 }
 
 func RegisterDealManagementServer(s *grpc.Server, srv DealManagementServer) {
@@ -514,7 +940,7 @@ func RegisterDealManagementServer(s *grpc.Server, srv DealManagementServer) {
 }
 
 func _DealManagement_List_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DealListRequest)
+	in := new(Count)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -526,13 +952,13 @@ func _DealManagement_List_Handler(srv interface{}, ctx context.Context, dec func
 		FullMethod: "/sonm.DealManagement/List",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DealManagementServer).List(ctx, req.(*DealListRequest))
+		return srv.(DealManagementServer).List(ctx, req.(*Count))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _DealManagement_Status_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ID)
+	in := new(BigInt)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -544,13 +970,13 @@ func _DealManagement_Status_Handler(srv interface{}, ctx context.Context, dec fu
 		FullMethod: "/sonm.DealManagement/Status",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DealManagementServer).Status(ctx, req.(*ID))
+		return srv.(DealManagementServer).Status(ctx, req.(*BigInt))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _DealManagement_Finish_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ID)
+	in := new(DealFinishRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -562,7 +988,151 @@ func _DealManagement_Finish_Handler(srv interface{}, ctx context.Context, dec fu
 		FullMethod: "/sonm.DealManagement/Finish",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DealManagementServer).Finish(ctx, req.(*ID))
+		return srv.(DealManagementServer).Finish(ctx, req.(*DealFinishRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DealManagement_FinishDeals_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DealsFinishRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DealManagementServer).FinishDeals(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/sonm.DealManagement/FinishDeals",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DealManagementServer).FinishDeals(ctx, req.(*DealsFinishRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DealManagement_PurgeDeals_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DealsPurgeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DealManagementServer).PurgeDeals(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/sonm.DealManagement/PurgeDeals",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DealManagementServer).PurgeDeals(ctx, req.(*DealsPurgeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DealManagement_Open_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(OpenDealRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DealManagementServer).Open(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/sonm.DealManagement/Open",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DealManagementServer).Open(ctx, req.(*OpenDealRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DealManagement_ChangeRequestsList_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BigInt)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DealManagementServer).ChangeRequestsList(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/sonm.DealManagement/ChangeRequestsList",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DealManagementServer).ChangeRequestsList(ctx, req.(*BigInt))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DealManagement_CreateChangeRequest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DealChangeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DealManagementServer).CreateChangeRequest(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/sonm.DealManagement/CreateChangeRequest",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DealManagementServer).CreateChangeRequest(ctx, req.(*DealChangeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DealManagement_ApproveChangeRequest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BigInt)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DealManagementServer).ApproveChangeRequest(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/sonm.DealManagement/ApproveChangeRequest",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DealManagementServer).ApproveChangeRequest(ctx, req.(*BigInt))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DealManagement_CancelChangeRequest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BigInt)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DealManagementServer).CancelChangeRequest(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/sonm.DealManagement/CancelChangeRequest",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DealManagementServer).CancelChangeRequest(ctx, req.(*BigInt))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DealManagement_QuickBuy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(QuickBuyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DealManagementServer).QuickBuy(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/sonm.DealManagement/QuickBuy",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DealManagementServer).QuickBuy(ctx, req.(*QuickBuyRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -583,542 +1153,758 @@ var _DealManagement_serviceDesc = grpc.ServiceDesc{
 			MethodName: "Finish",
 			Handler:    _DealManagement_Finish_Handler,
 		},
+		{
+			MethodName: "FinishDeals",
+			Handler:    _DealManagement_FinishDeals_Handler,
+		},
+		{
+			MethodName: "PurgeDeals",
+			Handler:    _DealManagement_PurgeDeals_Handler,
+		},
+		{
+			MethodName: "Open",
+			Handler:    _DealManagement_Open_Handler,
+		},
+		{
+			MethodName: "ChangeRequestsList",
+			Handler:    _DealManagement_ChangeRequestsList_Handler,
+		},
+		{
+			MethodName: "CreateChangeRequest",
+			Handler:    _DealManagement_CreateChangeRequest_Handler,
+		},
+		{
+			MethodName: "ApproveChangeRequest",
+			Handler:    _DealManagement_ApproveChangeRequest_Handler,
+		},
+		{
+			MethodName: "CancelChangeRequest",
+			Handler:    _DealManagement_CancelChangeRequest_Handler,
+		},
+		{
+			MethodName: "QuickBuy",
+			Handler:    _DealManagement_QuickBuy_Handler,
+		},
 	},
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "node.proto",
 }
 
-// Client API for HubManagement service
+// Client API for MasterManagement service
 
-type HubManagementClient interface {
-	// Status produse a detailed info about Hub
-	Status(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*HubStatusReply, error)
-	// WorkersList prouces a list of connected Workers
-	WorkersList(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*ListReply, error)
-	// WorkersStatus produces a detailed info about a Worker with given ID
-	WorkerStatus(ctx context.Context, in *ID, opts ...grpc.CallOption) (*InfoReply, error)
-	// GetRegisteredWorkers produce a list of Workers IDs allowed
-	// to connect to this hub
-	GetRegisteredWorkers(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*GetRegisteredWorkersReply, error)
-	// RegisterWorkers allows Worker with given ID connect to Hub
-	RegisterWorker(ctx context.Context, in *ID, opts ...grpc.CallOption) (*Empty, error)
-	// DeregisterWorkers deny Worker with given ID connect to Hub
-	DeregisterWorker(ctx context.Context, in *ID, opts ...grpc.CallOption) (*Empty, error)
-	// Devices returns list of all available devices that this Hub awares of
-	// with tieir full description.
-	DeviceList(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*DevicesReply, error)
-	// GetDeviceProperties allows to obtain previously assigned resource
-	// properties for a given device.
-	GetDeviceProperties(ctx context.Context, in *ID, opts ...grpc.CallOption) (*GetDevicePropertiesReply, error)
-	// SetDeviceProperties method allows to specify additional resource
-	// properties for a device specified by its ID.
-	// This may include GPU's capability to execute a well-known work such as
-	// Ethereum mining etc.
-	SetDeviceProperties(ctx context.Context, in *SetDevicePropertiesRequest, opts ...grpc.CallOption) (*Empty, error)
-	// GetAskPlans allows to obtain previously assigned Ask Plans from for a given worker.
-	GetAskPlans(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*SlotsReply, error)
-	// CreateAskPlan allows to create rules
-	// for creating Ask orders on Marketplace
-	CreateAskPlan(ctx context.Context, in *InsertSlotRequest, opts ...grpc.CallOption) (*ID, error)
-	// RemoveAskPlan allows to remove rules
-	// for creating Ask orders on Marketplace
-	RemoveAskPlan(ctx context.Context, in *ID, opts ...grpc.CallOption) (*Empty, error)
-	// List produces a list of all running tasks on the Hub
-	TaskList(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*TaskListReply, error)
-	// Status produces a detailed info about task on the Hub
-	TaskStatus(ctx context.Context, in *ID, opts ...grpc.CallOption) (*TaskStatusReply, error)
+type MasterManagementClient interface {
+	// WorkersList returns worker's list for current master address.
+	// List includes already registred workers and pending unapproved requests.
+	WorkersList(ctx context.Context, in *EthAddress, opts ...grpc.CallOption) (*WorkerListReply, error)
+	// WorkerConfirm (as master) confirms incoming request for given Worker address.
+	WorkerConfirm(ctx context.Context, in *EthAddress, opts ...grpc.CallOption) (*Empty, error)
+	// WorkerRemove (as master) unbinds given Worker address from Master address.
+	WorkerRemove(ctx context.Context, in *WorkerRemoveRequest, opts ...grpc.CallOption) (*Empty, error)
 }
 
-type hubManagementClient struct {
+type masterManagementClient struct {
 	cc *grpc.ClientConn
 }
 
-func NewHubManagementClient(cc *grpc.ClientConn) HubManagementClient {
-	return &hubManagementClient{cc}
+func NewMasterManagementClient(cc *grpc.ClientConn) MasterManagementClient {
+	return &masterManagementClient{cc}
 }
 
-func (c *hubManagementClient) Status(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*HubStatusReply, error) {
-	out := new(HubStatusReply)
-	err := grpc.Invoke(ctx, "/sonm.HubManagement/Status", in, out, c.cc, opts...)
+func (c *masterManagementClient) WorkersList(ctx context.Context, in *EthAddress, opts ...grpc.CallOption) (*WorkerListReply, error) {
+	out := new(WorkerListReply)
+	err := grpc.Invoke(ctx, "/sonm.MasterManagement/WorkersList", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *hubManagementClient) WorkersList(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*ListReply, error) {
-	out := new(ListReply)
-	err := grpc.Invoke(ctx, "/sonm.HubManagement/WorkersList", in, out, c.cc, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *hubManagementClient) WorkerStatus(ctx context.Context, in *ID, opts ...grpc.CallOption) (*InfoReply, error) {
-	out := new(InfoReply)
-	err := grpc.Invoke(ctx, "/sonm.HubManagement/WorkerStatus", in, out, c.cc, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *hubManagementClient) GetRegisteredWorkers(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*GetRegisteredWorkersReply, error) {
-	out := new(GetRegisteredWorkersReply)
-	err := grpc.Invoke(ctx, "/sonm.HubManagement/GetRegisteredWorkers", in, out, c.cc, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *hubManagementClient) RegisterWorker(ctx context.Context, in *ID, opts ...grpc.CallOption) (*Empty, error) {
+func (c *masterManagementClient) WorkerConfirm(ctx context.Context, in *EthAddress, opts ...grpc.CallOption) (*Empty, error) {
 	out := new(Empty)
-	err := grpc.Invoke(ctx, "/sonm.HubManagement/RegisterWorker", in, out, c.cc, opts...)
+	err := grpc.Invoke(ctx, "/sonm.MasterManagement/WorkerConfirm", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *hubManagementClient) DeregisterWorker(ctx context.Context, in *ID, opts ...grpc.CallOption) (*Empty, error) {
+func (c *masterManagementClient) WorkerRemove(ctx context.Context, in *WorkerRemoveRequest, opts ...grpc.CallOption) (*Empty, error) {
 	out := new(Empty)
-	err := grpc.Invoke(ctx, "/sonm.HubManagement/DeregisterWorker", in, out, c.cc, opts...)
+	err := grpc.Invoke(ctx, "/sonm.MasterManagement/WorkerRemove", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *hubManagementClient) DeviceList(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*DevicesReply, error) {
-	out := new(DevicesReply)
-	err := grpc.Invoke(ctx, "/sonm.HubManagement/DeviceList", in, out, c.cc, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
+// Server API for MasterManagement service
+
+type MasterManagementServer interface {
+	// WorkersList returns worker's list for current master address.
+	// List includes already registred workers and pending unapproved requests.
+	WorkersList(context.Context, *EthAddress) (*WorkerListReply, error)
+	// WorkerConfirm (as master) confirms incoming request for given Worker address.
+	WorkerConfirm(context.Context, *EthAddress) (*Empty, error)
+	// WorkerRemove (as master) unbinds given Worker address from Master address.
+	WorkerRemove(context.Context, *WorkerRemoveRequest) (*Empty, error)
 }
 
-func (c *hubManagementClient) GetDeviceProperties(ctx context.Context, in *ID, opts ...grpc.CallOption) (*GetDevicePropertiesReply, error) {
-	out := new(GetDevicePropertiesReply)
-	err := grpc.Invoke(ctx, "/sonm.HubManagement/GetDeviceProperties", in, out, c.cc, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
+func RegisterMasterManagementServer(s *grpc.Server, srv MasterManagementServer) {
+	s.RegisterService(&_MasterManagement_serviceDesc, srv)
 }
 
-func (c *hubManagementClient) SetDeviceProperties(ctx context.Context, in *SetDevicePropertiesRequest, opts ...grpc.CallOption) (*Empty, error) {
-	out := new(Empty)
-	err := grpc.Invoke(ctx, "/sonm.HubManagement/SetDeviceProperties", in, out, c.cc, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *hubManagementClient) GetAskPlans(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*SlotsReply, error) {
-	out := new(SlotsReply)
-	err := grpc.Invoke(ctx, "/sonm.HubManagement/GetAskPlans", in, out, c.cc, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *hubManagementClient) CreateAskPlan(ctx context.Context, in *InsertSlotRequest, opts ...grpc.CallOption) (*ID, error) {
-	out := new(ID)
-	err := grpc.Invoke(ctx, "/sonm.HubManagement/CreateAskPlan", in, out, c.cc, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *hubManagementClient) RemoveAskPlan(ctx context.Context, in *ID, opts ...grpc.CallOption) (*Empty, error) {
-	out := new(Empty)
-	err := grpc.Invoke(ctx, "/sonm.HubManagement/RemoveAskPlan", in, out, c.cc, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *hubManagementClient) TaskList(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*TaskListReply, error) {
-	out := new(TaskListReply)
-	err := grpc.Invoke(ctx, "/sonm.HubManagement/TaskList", in, out, c.cc, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *hubManagementClient) TaskStatus(ctx context.Context, in *ID, opts ...grpc.CallOption) (*TaskStatusReply, error) {
-	out := new(TaskStatusReply)
-	err := grpc.Invoke(ctx, "/sonm.HubManagement/TaskStatus", in, out, c.cc, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-// Server API for HubManagement service
-
-type HubManagementServer interface {
-	// Status produse a detailed info about Hub
-	Status(context.Context, *Empty) (*HubStatusReply, error)
-	// WorkersList prouces a list of connected Workers
-	WorkersList(context.Context, *Empty) (*ListReply, error)
-	// WorkersStatus produces a detailed info about a Worker with given ID
-	WorkerStatus(context.Context, *ID) (*InfoReply, error)
-	// GetRegisteredWorkers produce a list of Workers IDs allowed
-	// to connect to this hub
-	GetRegisteredWorkers(context.Context, *Empty) (*GetRegisteredWorkersReply, error)
-	// RegisterWorkers allows Worker with given ID connect to Hub
-	RegisterWorker(context.Context, *ID) (*Empty, error)
-	// DeregisterWorkers deny Worker with given ID connect to Hub
-	DeregisterWorker(context.Context, *ID) (*Empty, error)
-	// Devices returns list of all available devices that this Hub awares of
-	// with tieir full description.
-	DeviceList(context.Context, *Empty) (*DevicesReply, error)
-	// GetDeviceProperties allows to obtain previously assigned resource
-	// properties for a given device.
-	GetDeviceProperties(context.Context, *ID) (*GetDevicePropertiesReply, error)
-	// SetDeviceProperties method allows to specify additional resource
-	// properties for a device specified by its ID.
-	// This may include GPU's capability to execute a well-known work such as
-	// Ethereum mining etc.
-	SetDeviceProperties(context.Context, *SetDevicePropertiesRequest) (*Empty, error)
-	// GetAskPlans allows to obtain previously assigned Ask Plans from for a given worker.
-	GetAskPlans(context.Context, *Empty) (*SlotsReply, error)
-	// CreateAskPlan allows to create rules
-	// for creating Ask orders on Marketplace
-	CreateAskPlan(context.Context, *InsertSlotRequest) (*ID, error)
-	// RemoveAskPlan allows to remove rules
-	// for creating Ask orders on Marketplace
-	RemoveAskPlan(context.Context, *ID) (*Empty, error)
-	// List produces a list of all running tasks on the Hub
-	TaskList(context.Context, *Empty) (*TaskListReply, error)
-	// Status produces a detailed info about task on the Hub
-	TaskStatus(context.Context, *ID) (*TaskStatusReply, error)
-}
-
-func RegisterHubManagementServer(s *grpc.Server, srv HubManagementServer) {
-	s.RegisterService(&_HubManagement_serviceDesc, srv)
-}
-
-func _HubManagement_Status_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Empty)
+func _MasterManagement_WorkersList_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(EthAddress)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(HubManagementServer).Status(ctx, in)
+		return srv.(MasterManagementServer).WorkersList(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/sonm.HubManagement/Status",
+		FullMethod: "/sonm.MasterManagement/WorkersList",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(HubManagementServer).Status(ctx, req.(*Empty))
+		return srv.(MasterManagementServer).WorkersList(ctx, req.(*EthAddress))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _HubManagement_WorkersList_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Empty)
+func _MasterManagement_WorkerConfirm_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(EthAddress)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(HubManagementServer).WorkersList(ctx, in)
+		return srv.(MasterManagementServer).WorkerConfirm(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/sonm.HubManagement/WorkersList",
+		FullMethod: "/sonm.MasterManagement/WorkerConfirm",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(HubManagementServer).WorkersList(ctx, req.(*Empty))
+		return srv.(MasterManagementServer).WorkerConfirm(ctx, req.(*EthAddress))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _HubManagement_WorkerStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ID)
+func _MasterManagement_WorkerRemove_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(WorkerRemoveRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(HubManagementServer).WorkerStatus(ctx, in)
+		return srv.(MasterManagementServer).WorkerRemove(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/sonm.HubManagement/WorkerStatus",
+		FullMethod: "/sonm.MasterManagement/WorkerRemove",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(HubManagementServer).WorkerStatus(ctx, req.(*ID))
+		return srv.(MasterManagementServer).WorkerRemove(ctx, req.(*WorkerRemoveRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _HubManagement_GetRegisteredWorkers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(HubManagementServer).GetRegisteredWorkers(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/sonm.HubManagement/GetRegisteredWorkers",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(HubManagementServer).GetRegisteredWorkers(ctx, req.(*Empty))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _HubManagement_RegisterWorker_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ID)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(HubManagementServer).RegisterWorker(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/sonm.HubManagement/RegisterWorker",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(HubManagementServer).RegisterWorker(ctx, req.(*ID))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _HubManagement_DeregisterWorker_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ID)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(HubManagementServer).DeregisterWorker(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/sonm.HubManagement/DeregisterWorker",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(HubManagementServer).DeregisterWorker(ctx, req.(*ID))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _HubManagement_DeviceList_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(HubManagementServer).DeviceList(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/sonm.HubManagement/DeviceList",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(HubManagementServer).DeviceList(ctx, req.(*Empty))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _HubManagement_GetDeviceProperties_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ID)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(HubManagementServer).GetDeviceProperties(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/sonm.HubManagement/GetDeviceProperties",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(HubManagementServer).GetDeviceProperties(ctx, req.(*ID))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _HubManagement_SetDeviceProperties_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SetDevicePropertiesRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(HubManagementServer).SetDeviceProperties(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/sonm.HubManagement/SetDeviceProperties",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(HubManagementServer).SetDeviceProperties(ctx, req.(*SetDevicePropertiesRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _HubManagement_GetAskPlans_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(HubManagementServer).GetAskPlans(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/sonm.HubManagement/GetAskPlans",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(HubManagementServer).GetAskPlans(ctx, req.(*Empty))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _HubManagement_CreateAskPlan_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(InsertSlotRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(HubManagementServer).CreateAskPlan(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/sonm.HubManagement/CreateAskPlan",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(HubManagementServer).CreateAskPlan(ctx, req.(*InsertSlotRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _HubManagement_RemoveAskPlan_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ID)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(HubManagementServer).RemoveAskPlan(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/sonm.HubManagement/RemoveAskPlan",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(HubManagementServer).RemoveAskPlan(ctx, req.(*ID))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _HubManagement_TaskList_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(HubManagementServer).TaskList(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/sonm.HubManagement/TaskList",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(HubManagementServer).TaskList(ctx, req.(*Empty))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _HubManagement_TaskStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ID)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(HubManagementServer).TaskStatus(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/sonm.HubManagement/TaskStatus",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(HubManagementServer).TaskStatus(ctx, req.(*ID))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-var _HubManagement_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "sonm.HubManagement",
-	HandlerType: (*HubManagementServer)(nil),
+var _MasterManagement_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "sonm.MasterManagement",
+	HandlerType: (*MasterManagementServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "Status",
-			Handler:    _HubManagement_Status_Handler,
-		},
-		{
 			MethodName: "WorkersList",
-			Handler:    _HubManagement_WorkersList_Handler,
+			Handler:    _MasterManagement_WorkersList_Handler,
 		},
 		{
-			MethodName: "WorkerStatus",
-			Handler:    _HubManagement_WorkerStatus_Handler,
+			MethodName: "WorkerConfirm",
+			Handler:    _MasterManagement_WorkerConfirm_Handler,
 		},
 		{
-			MethodName: "GetRegisteredWorkers",
-			Handler:    _HubManagement_GetRegisteredWorkers_Handler,
+			MethodName: "WorkerRemove",
+			Handler:    _MasterManagement_WorkerRemove_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "node.proto",
+}
+
+// Client API for TokenManagement service
+
+type TokenManagementClient interface {
+	// TestTokens increases balance for some amount of test tokens
+	// into live-chian ethereum network.
+	TestTokens(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Empty, error)
+	// Balance provide account balance for live- and side- chains.
+	// Deprecated: use BalanceOf method instead.
+	Balance(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*BalanceReply, error)
+	// BalanceOf provide account balance of specified address.
+	BalanceOf(ctx context.Context, in *EthAddress, opts ...grpc.CallOption) (*BalanceReply, error)
+	// Deposit transfers funds from masterchain to sidechain
+	Deposit(ctx context.Context, in *BigInt, opts ...grpc.CallOption) (*Empty, error)
+	// Withdraw transfers funds from sidechain to masterchain
+	Withdraw(ctx context.Context, in *BigInt, opts ...grpc.CallOption) (*Empty, error)
+	// MarketAllowance returns current allowance for BC market
+	MarketAllowance(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*BigInt, error)
+	// Transfer transfers funds from one sidechain account to another.
+	Transfer(ctx context.Context, in *TokenTransferRequest, opts ...grpc.CallOption) (*Empty, error)
+}
+
+type tokenManagementClient struct {
+	cc *grpc.ClientConn
+}
+
+func NewTokenManagementClient(cc *grpc.ClientConn) TokenManagementClient {
+	return &tokenManagementClient{cc}
+}
+
+func (c *tokenManagementClient) TestTokens(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*Empty, error) {
+	out := new(Empty)
+	err := grpc.Invoke(ctx, "/sonm.TokenManagement/TestTokens", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *tokenManagementClient) Balance(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*BalanceReply, error) {
+	out := new(BalanceReply)
+	err := grpc.Invoke(ctx, "/sonm.TokenManagement/Balance", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *tokenManagementClient) BalanceOf(ctx context.Context, in *EthAddress, opts ...grpc.CallOption) (*BalanceReply, error) {
+	out := new(BalanceReply)
+	err := grpc.Invoke(ctx, "/sonm.TokenManagement/BalanceOf", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *tokenManagementClient) Deposit(ctx context.Context, in *BigInt, opts ...grpc.CallOption) (*Empty, error) {
+	out := new(Empty)
+	err := grpc.Invoke(ctx, "/sonm.TokenManagement/Deposit", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *tokenManagementClient) Withdraw(ctx context.Context, in *BigInt, opts ...grpc.CallOption) (*Empty, error) {
+	out := new(Empty)
+	err := grpc.Invoke(ctx, "/sonm.TokenManagement/Withdraw", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *tokenManagementClient) MarketAllowance(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*BigInt, error) {
+	out := new(BigInt)
+	err := grpc.Invoke(ctx, "/sonm.TokenManagement/MarketAllowance", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *tokenManagementClient) Transfer(ctx context.Context, in *TokenTransferRequest, opts ...grpc.CallOption) (*Empty, error) {
+	out := new(Empty)
+	err := grpc.Invoke(ctx, "/sonm.TokenManagement/Transfer", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// Server API for TokenManagement service
+
+type TokenManagementServer interface {
+	// TestTokens increases balance for some amount of test tokens
+	// into live-chian ethereum network.
+	TestTokens(context.Context, *Empty) (*Empty, error)
+	// Balance provide account balance for live- and side- chains.
+	// Deprecated: use BalanceOf method instead.
+	Balance(context.Context, *Empty) (*BalanceReply, error)
+	// BalanceOf provide account balance of specified address.
+	BalanceOf(context.Context, *EthAddress) (*BalanceReply, error)
+	// Deposit transfers funds from masterchain to sidechain
+	Deposit(context.Context, *BigInt) (*Empty, error)
+	// Withdraw transfers funds from sidechain to masterchain
+	Withdraw(context.Context, *BigInt) (*Empty, error)
+	// MarketAllowance returns current allowance for BC market
+	MarketAllowance(context.Context, *Empty) (*BigInt, error)
+	// Transfer transfers funds from one sidechain account to another.
+	Transfer(context.Context, *TokenTransferRequest) (*Empty, error)
+}
+
+func RegisterTokenManagementServer(s *grpc.Server, srv TokenManagementServer) {
+	s.RegisterService(&_TokenManagement_serviceDesc, srv)
+}
+
+func _TokenManagement_TestTokens_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TokenManagementServer).TestTokens(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/sonm.TokenManagement/TestTokens",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TokenManagementServer).TestTokens(ctx, req.(*Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TokenManagement_Balance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TokenManagementServer).Balance(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/sonm.TokenManagement/Balance",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TokenManagementServer).Balance(ctx, req.(*Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TokenManagement_BalanceOf_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(EthAddress)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TokenManagementServer).BalanceOf(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/sonm.TokenManagement/BalanceOf",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TokenManagementServer).BalanceOf(ctx, req.(*EthAddress))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TokenManagement_Deposit_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BigInt)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TokenManagementServer).Deposit(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/sonm.TokenManagement/Deposit",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TokenManagementServer).Deposit(ctx, req.(*BigInt))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TokenManagement_Withdraw_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BigInt)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TokenManagementServer).Withdraw(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/sonm.TokenManagement/Withdraw",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TokenManagementServer).Withdraw(ctx, req.(*BigInt))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TokenManagement_MarketAllowance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TokenManagementServer).MarketAllowance(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/sonm.TokenManagement/MarketAllowance",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TokenManagementServer).MarketAllowance(ctx, req.(*Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _TokenManagement_Transfer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TokenTransferRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TokenManagementServer).Transfer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/sonm.TokenManagement/Transfer",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TokenManagementServer).Transfer(ctx, req.(*TokenTransferRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+var _TokenManagement_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "sonm.TokenManagement",
+	HandlerType: (*TokenManagementServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "TestTokens",
+			Handler:    _TokenManagement_TestTokens_Handler,
 		},
 		{
-			MethodName: "RegisterWorker",
-			Handler:    _HubManagement_RegisterWorker_Handler,
+			MethodName: "Balance",
+			Handler:    _TokenManagement_Balance_Handler,
 		},
 		{
-			MethodName: "DeregisterWorker",
-			Handler:    _HubManagement_DeregisterWorker_Handler,
+			MethodName: "BalanceOf",
+			Handler:    _TokenManagement_BalanceOf_Handler,
 		},
 		{
-			MethodName: "DeviceList",
-			Handler:    _HubManagement_DeviceList_Handler,
+			MethodName: "Deposit",
+			Handler:    _TokenManagement_Deposit_Handler,
 		},
 		{
-			MethodName: "GetDeviceProperties",
-			Handler:    _HubManagement_GetDeviceProperties_Handler,
+			MethodName: "Withdraw",
+			Handler:    _TokenManagement_Withdraw_Handler,
 		},
 		{
-			MethodName: "SetDeviceProperties",
-			Handler:    _HubManagement_SetDeviceProperties_Handler,
+			MethodName: "MarketAllowance",
+			Handler:    _TokenManagement_MarketAllowance_Handler,
 		},
 		{
-			MethodName: "GetAskPlans",
-			Handler:    _HubManagement_GetAskPlans_Handler,
+			MethodName: "Transfer",
+			Handler:    _TokenManagement_Transfer_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "node.proto",
+}
+
+// Client API for Blacklist service
+
+type BlacklistClient interface {
+	// List addresses into given blacklist
+	List(ctx context.Context, in *EthAddress, opts ...grpc.CallOption) (*BlacklistReply, error)
+	// Remove removes given address from blacklist
+	Remove(ctx context.Context, in *EthAddress, opts ...grpc.CallOption) (*Empty, error)
+}
+
+type blacklistClient struct {
+	cc *grpc.ClientConn
+}
+
+func NewBlacklistClient(cc *grpc.ClientConn) BlacklistClient {
+	return &blacklistClient{cc}
+}
+
+func (c *blacklistClient) List(ctx context.Context, in *EthAddress, opts ...grpc.CallOption) (*BlacklistReply, error) {
+	out := new(BlacklistReply)
+	err := grpc.Invoke(ctx, "/sonm.Blacklist/List", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *blacklistClient) Remove(ctx context.Context, in *EthAddress, opts ...grpc.CallOption) (*Empty, error) {
+	out := new(Empty)
+	err := grpc.Invoke(ctx, "/sonm.Blacklist/Remove", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// Server API for Blacklist service
+
+type BlacklistServer interface {
+	// List addresses into given blacklist
+	List(context.Context, *EthAddress) (*BlacklistReply, error)
+	// Remove removes given address from blacklist
+	Remove(context.Context, *EthAddress) (*Empty, error)
+}
+
+func RegisterBlacklistServer(s *grpc.Server, srv BlacklistServer) {
+	s.RegisterService(&_Blacklist_serviceDesc, srv)
+}
+
+func _Blacklist_List_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(EthAddress)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BlacklistServer).List(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/sonm.Blacklist/List",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BlacklistServer).List(ctx, req.(*EthAddress))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Blacklist_Remove_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(EthAddress)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BlacklistServer).Remove(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/sonm.Blacklist/Remove",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BlacklistServer).Remove(ctx, req.(*EthAddress))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+var _Blacklist_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "sonm.Blacklist",
+	HandlerType: (*BlacklistServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "List",
+			Handler:    _Blacklist_List_Handler,
 		},
 		{
-			MethodName: "CreateAskPlan",
-			Handler:    _HubManagement_CreateAskPlan_Handler,
+			MethodName: "Remove",
+			Handler:    _Blacklist_Remove_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "node.proto",
+}
+
+// Client API for Profiles service
+
+type ProfilesClient interface {
+	// List allows searching for profiles
+	List(ctx context.Context, in *ProfilesRequest, opts ...grpc.CallOption) (*ProfilesReply, error)
+	// Status shows detailed info about given profile
+	Status(ctx context.Context, in *EthID, opts ...grpc.CallOption) (*Profile, error)
+	// RemoveAttribute allows to remove profile attributes
+	// for the user's own profile
+	RemoveAttribute(ctx context.Context, in *BigInt, opts ...grpc.CallOption) (*Empty, error)
+}
+
+type profilesClient struct {
+	cc *grpc.ClientConn
+}
+
+func NewProfilesClient(cc *grpc.ClientConn) ProfilesClient {
+	return &profilesClient{cc}
+}
+
+func (c *profilesClient) List(ctx context.Context, in *ProfilesRequest, opts ...grpc.CallOption) (*ProfilesReply, error) {
+	out := new(ProfilesReply)
+	err := grpc.Invoke(ctx, "/sonm.Profiles/List", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *profilesClient) Status(ctx context.Context, in *EthID, opts ...grpc.CallOption) (*Profile, error) {
+	out := new(Profile)
+	err := grpc.Invoke(ctx, "/sonm.Profiles/Status", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *profilesClient) RemoveAttribute(ctx context.Context, in *BigInt, opts ...grpc.CallOption) (*Empty, error) {
+	out := new(Empty)
+	err := grpc.Invoke(ctx, "/sonm.Profiles/RemoveAttribute", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// Server API for Profiles service
+
+type ProfilesServer interface {
+	// List allows searching for profiles
+	List(context.Context, *ProfilesRequest) (*ProfilesReply, error)
+	// Status shows detailed info about given profile
+	Status(context.Context, *EthID) (*Profile, error)
+	// RemoveAttribute allows to remove profile attributes
+	// for the user's own profile
+	RemoveAttribute(context.Context, *BigInt) (*Empty, error)
+}
+
+func RegisterProfilesServer(s *grpc.Server, srv ProfilesServer) {
+	s.RegisterService(&_Profiles_serviceDesc, srv)
+}
+
+func _Profiles_List_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ProfilesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProfilesServer).List(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/sonm.Profiles/List",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProfilesServer).List(ctx, req.(*ProfilesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Profiles_Status_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(EthID)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProfilesServer).Status(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/sonm.Profiles/Status",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProfilesServer).Status(ctx, req.(*EthID))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Profiles_RemoveAttribute_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BigInt)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProfilesServer).RemoveAttribute(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/sonm.Profiles/RemoveAttribute",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProfilesServer).RemoveAttribute(ctx, req.(*BigInt))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+var _Profiles_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "sonm.Profiles",
+	HandlerType: (*ProfilesServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "List",
+			Handler:    _Profiles_List_Handler,
 		},
 		{
-			MethodName: "RemoveAskPlan",
-			Handler:    _HubManagement_RemoveAskPlan_Handler,
+			MethodName: "Status",
+			Handler:    _Profiles_Status_Handler,
 		},
 		{
-			MethodName: "TaskList",
-			Handler:    _HubManagement_TaskList_Handler,
+			MethodName: "RemoveAttribute",
+			Handler:    _Profiles_RemoveAttribute_Handler,
 		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "node.proto",
+}
+
+// Client API for Monitoring service
+
+type MonitoringClient interface {
+	MetricsNPP(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*NPPMetricsReply, error)
+}
+
+type monitoringClient struct {
+	cc *grpc.ClientConn
+}
+
+func NewMonitoringClient(cc *grpc.ClientConn) MonitoringClient {
+	return &monitoringClient{cc}
+}
+
+func (c *monitoringClient) MetricsNPP(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*NPPMetricsReply, error) {
+	out := new(NPPMetricsReply)
+	err := grpc.Invoke(ctx, "/sonm.Monitoring/MetricsNPP", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// Server API for Monitoring service
+
+type MonitoringServer interface {
+	MetricsNPP(context.Context, *Empty) (*NPPMetricsReply, error)
+}
+
+func RegisterMonitoringServer(s *grpc.Server, srv MonitoringServer) {
+	s.RegisterService(&_Monitoring_serviceDesc, srv)
+}
+
+func _Monitoring_MetricsNPP_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MonitoringServer).MetricsNPP(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/sonm.Monitoring/MetricsNPP",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MonitoringServer).MetricsNPP(ctx, req.(*Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+var _Monitoring_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "sonm.Monitoring",
+	HandlerType: (*MonitoringServer)(nil),
+	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "TaskStatus",
-			Handler:    _HubManagement_TaskStatus_Handler,
+			MethodName: "MetricsNPP",
+			Handler:    _Monitoring_MetricsNPP_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
@@ -1128,44 +1914,86 @@ var _HubManagement_serviceDesc = grpc.ServiceDesc{
 func init() { proto.RegisterFile("node.proto", fileDescriptor9) }
 
 var fileDescriptor9 = []byte{
-	// 610 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x8c, 0x54, 0x41, 0x4f, 0xdb, 0x4c,
-	0x10, 0x8d, 0xf9, 0x42, 0x04, 0x13, 0x92, 0xa0, 0x85, 0x4f, 0x50, 0x1f, 0x68, 0xea, 0x1e, 0xea,
-	0x0a, 0x91, 0x20, 0x17, 0xf5, 0xd6, 0x03, 0xc2, 0x05, 0x22, 0x51, 0x29, 0xb5, 0x2b, 0xf5, 0xec,
-	0x34, 0x53, 0xc7, 0x8a, 0xe3, 0x75, 0x77, 0xd7, 0x54, 0xfc, 0x86, 0xfe, 0xd0, 0xfe, 0x83, 0x9e,
-	0xab, 0xf5, 0x7a, 0x1d, 0xdb, 0x24, 0x52, 0x6f, 0x99, 0x99, 0x37, 0x33, 0xef, 0xbd, 0x71, 0x16,
-	0x20, 0xa1, 0x73, 0x1c, 0xa5, 0x8c, 0x0a, 0x4a, 0xda, 0x9c, 0x26, 0x2b, 0x13, 0xe6, 0x18, 0xc4,
-	0x2a, 0x63, 0x0e, 0xa2, 0x44, 0xe6, 0x92, 0x28, 0x28, 0x12, 0xfb, 0x8b, 0x6c, 0xa6, 0x7e, 0x5a,
-	0x6f, 0x60, 0xf0, 0x25, 0xe0, 0xcb, 0x87, 0x88, 0x0b, 0x0f, 0x7f, 0x64, 0xc8, 0x05, 0x39, 0x86,
-	0xdd, 0x45, 0x36, 0x9b, 0xb8, 0xa7, 0xc6, 0xd0, 0xb0, 0xf7, 0x3d, 0x15, 0x58, 0x9f, 0x61, 0xe0,
-	0x62, 0x10, 0x37, 0x80, 0xf4, 0x67, 0x82, 0x4c, 0x03, 0xf3, 0x80, 0xd8, 0xd0, 0xe1, 0x22, 0x10,
-	0x19, 0x3f, 0xdd, 0x19, 0x1a, 0x76, 0xdf, 0x39, 0x1c, 0xc9, 0xe5, 0x23, 0xd9, 0xec, 0xe7, 0x79,
-	0xaf, 0xa8, 0x5b, 0x63, 0xe8, 0xad, 0x47, 0xa6, 0xf1, 0x13, 0x39, 0x83, 0xb6, 0xa4, 0x7d, 0x6a,
-	0x0c, 0xff, 0xb3, 0xbb, 0x0e, 0xac, 0x1b, 0xbd, 0x3c, 0xef, 0xfc, 0xd9, 0x81, 0xbe, 0x64, 0xfb,
-	0x29, 0x48, 0x82, 0x10, 0x57, 0x98, 0x08, 0x72, 0x05, 0x6d, 0xd9, 0x4f, 0xfe, 0x57, 0xe0, 0x86,
-	0x16, 0xf3, 0xa8, 0x99, 0x4e, 0xe3, 0x27, 0xab, 0x45, 0x2e, 0x60, 0x6f, 0x9a, 0xf1, 0x85, 0x4c,
-	0x93, 0xae, 0x82, 0xdc, 0x2c, 0xb2, 0x64, 0x69, 0xf6, 0x55, 0x30, 0x65, 0x34, 0x64, 0xc8, 0xb9,
-	0xd5, 0xb2, 0x8d, 0x4b, 0x83, 0x7c, 0x80, 0x5d, 0x5f, 0x04, 0x4c, 0x90, 0x17, 0xaa, 0x7c, 0x9f,
-	0xcd, 0xf2, 0x58, 0xf6, 0xeb, 0x4d, 0x27, 0x9b, 0x4a, 0x6a, 0xdb, 0x18, 0x3a, 0x4a, 0x39, 0x39,
-	0x58, 0xd3, 0x99, 0xb8, 0x66, 0x85, 0x73, 0xe1, 0x4c, 0xd1, 0xf0, 0x1e, 0xda, 0x0f, 0x34, 0xe4,
-	0x35, 0x51, 0x34, 0xe4, 0x9b, 0x44, 0xd1, 0x90, 0xe7, 0xcc, 0xad, 0xd6, 0xa5, 0x41, 0x5e, 0x43,
-	0xdb, 0x17, 0x34, 0x6d, 0xac, 0x29, 0x04, 0x7e, 0x5c, 0xa5, 0x42, 0x0e, 0x77, 0xa4, 0xf6, 0x38,
-	0xce, 0xb5, 0x17, 0x0b, 0x74, 0xac, 0x17, 0x54, 0x2d, 0x91, 0x83, 0x9d, 0x5f, 0x06, 0xf4, 0xe5,
-	0x1d, 0xb6, 0x1b, 0xdf, 0xf8, 0x36, 0x34, 0xc7, 0xda, 0x7d, 0xad, 0x16, 0x19, 0x96, 0x56, 0xec,
-	0x29, 0xc0, 0xc4, 0x35, 0x2b, 0x77, 0xb6, 0x5a, 0xe4, 0x15, 0x74, 0x6e, 0xa3, 0x24, 0xe2, 0x8b,
-	0x0a, 0xa2, 0xae, 0xc0, 0xf9, 0xbd, 0x0b, 0xbd, 0xfb, 0x6c, 0x56, 0x21, 0x73, 0x51, 0x8e, 0xad,
-	0x42, 0xcd, 0xe3, 0xea, 0x4d, 0x2a, 0xfe, 0x5e, 0x40, 0xf7, 0x2b, 0x65, 0x4b, 0x64, 0x3c, 0x97,
-	0x50, 0xeb, 0x19, 0xa8, 0xa0, 0x4a, 0xfa, 0x1c, 0x0e, 0x14, 0xfc, 0x19, 0xf5, 0x02, 0x3c, 0x49,
-	0xbe, 0x53, 0x0d, 0xbe, 0x85, 0xe3, 0x3b, 0x14, 0x1e, 0x86, 0x11, 0x17, 0xc8, 0x70, 0x5e, 0x2c,
-	0xaa, 0x2f, 0x79, 0xa9, 0x82, 0x4d, 0x40, 0x3d, 0xe7, 0x2d, 0xf4, 0x75, 0x4d, 0x55, 0xb6, 0xfa,
-	0x41, 0xce, 0xe1, 0xd0, 0x45, 0xf6, 0x8f, 0xe0, 0x31, 0x80, 0x8b, 0x8f, 0xd1, 0x37, 0x7c, 0x2e,
-	0x9d, 0xe8, 0x43, 0xc8, 0x72, 0x49, 0xe4, 0x1a, 0x8e, 0xee, 0x50, 0xa8, 0xe4, 0x94, 0xd1, 0x14,
-	0x99, 0x88, 0xb0, 0x6a, 0xc2, 0x59, 0x29, 0xa6, 0x09, 0x5a, 0x7b, 0x72, 0xe4, 0x6f, 0x18, 0x31,
-	0x54, 0x8d, 0xfe, 0xa6, 0xc6, 0xda, 0x87, 0xa8, 0xb9, 0x8f, 0xa0, 0x7b, 0x87, 0xe2, 0x9a, 0x2f,
-	0xa7, 0x71, 0x90, 0x34, 0x2c, 0x2d, 0x9e, 0x19, 0x3f, 0xa6, 0xa2, 0xdc, 0x7b, 0x05, 0xbd, 0x1b,
-	0x86, 0x81, 0xc0, 0xa2, 0x85, 0x9c, 0xe8, 0x7b, 0x71, 0x64, 0x42, 0x42, 0xf5, 0xa2, 0x52, 0x8d,
-	0xd5, 0x22, 0x36, 0xf4, 0x3c, 0x5c, 0xd1, 0xc7, 0xb2, 0x6b, 0xab, 0x97, 0x23, 0xd8, 0xd3, 0x2f,
-	0x4b, 0x9d, 0xcc, 0x96, 0x67, 0x67, 0x0c, 0xb0, 0xfe, 0xb3, 0x57, 0xc6, 0x6e, 0x7b, 0x08, 0x66,
-	0x9d, 0xfc, 0x91, 0x7e, 0xf7, 0x37, 0x00, 0x00, 0xff, 0xff, 0xc7, 0x25, 0x75, 0x62, 0xe0, 0x05,
-	0x00, 0x00,
+	// 1294 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x94, 0x57, 0xdd, 0x72, 0xdb, 0x44,
+	0x14, 0xb6, 0x1c, 0xc7, 0x71, 0x8e, 0xdd, 0x38, 0xdd, 0xa4, 0x10, 0x34, 0x85, 0xc9, 0x08, 0x86,
+	0xba, 0xb4, 0x38, 0x19, 0xb7, 0xd0, 0x50, 0x3a, 0x0c, 0x49, 0x1c, 0x86, 0x30, 0x4d, 0x6a, 0x94,
+	0xcc, 0x84, 0x2b, 0x18, 0xc5, 0x5a, 0xdb, 0x3b, 0x96, 0x76, 0x85, 0x76, 0x95, 0x8c, 0xdf, 0x84,
+	0x3b, 0x6e, 0xb8, 0xe6, 0x9a, 0x27, 0xe1, 0x0d, 0x78, 0x0f, 0x66, 0xb5, 0xbb, 0xb6, 0x24, 0x2b,
+	0x2d, 0xdc, 0x59, 0xe7, 0x7c, 0xe7, 0x67, 0xbf, 0xb3, 0x3a, 0x9f, 0x0c, 0x40, 0x99, 0x8f, 0xbb,
+	0x51, 0xcc, 0x04, 0x43, 0x35, 0xce, 0x68, 0x68, 0xb7, 0xae, 0xc9, 0x98, 0x50, 0xa1, 0x6c, 0x76,
+	0x7b, 0xc8, 0xa8, 0xf0, 0x08, 0xc5, 0xb1, 0x36, 0xac, 0xfb, 0xb7, 0x13, 0xe3, 0x23, 0x54, 0x46,
+	0x50, 0xe2, 0x69, 0xc3, 0xfd, 0xd0, 0x8b, 0xa7, 0x58, 0x44, 0x81, 0x37, 0xd4, 0x39, 0xed, 0xd6,
+	0x2d, 0x8b, 0xa7, 0xf3, 0xe0, 0xfd, 0x31, 0x11, 0x93, 0xe4, 0xba, 0x3b, 0x64, 0xe1, 0x5e, 0x14,
+	0xb3, 0x10, 0x8b, 0x09, 0x4e, 0xf8, 0xde, 0x30, 0x20, 0x98, 0x8a, 0x5f, 0x42, 0xe6, 0xe3, 0x60,
+	0x2f, 0xc4, 0x22, 0x26, 0x43, 0xae, 0x22, 0x9c, 0x9f, 0x00, 0xfd, 0xc0, 0x08, 0x3d, 0xc7, 0x42,
+	0x26, 0x72, 0xf1, 0xaf, 0x09, 0xe6, 0x02, 0x7d, 0x02, 0x75, 0xe1, 0xf1, 0xe9, 0x69, 0x7f, 0xc7,
+	0xda, 0xb5, 0x3a, 0xcd, 0x5e, 0xab, 0x2b, 0x1b, 0xe9, 0x5e, 0xa6, 0x36, 0x57, 0xfb, 0xd0, 0x43,
+	0x58, 0xd7, 0x71, 0xa7, 0xfd, 0x9d, 0xea, 0xae, 0xd5, 0x59, 0x77, 0x17, 0x06, 0xe7, 0x05, 0xb4,
+	0x25, 0xfe, 0x35, 0xe1, 0x22, 0x93, 0xd6, 0xc7, 0x5e, 0x50, 0x4c, 0x7b, 0x44, 0xc6, 0xa7, 0x54,
+	0xb8, 0xda, 0xe7, 0xdc, 0x42, 0xfb, 0xc7, 0x84, 0x0c, 0xa7, 0x47, 0xc9, 0xcc, 0x04, 0x3a, 0xb0,
+	0x5a, 0xd2, 0x8e, 0x8e, 0x53, 0x2e, 0xf4, 0x19, 0x34, 0xfc, 0x24, 0xf6, 0x04, 0x61, 0x34, 0x6d,
+	0xa6, 0xd9, 0xdb, 0x50, 0xb0, 0xbe, 0xb6, 0xba, 0x73, 0x3f, 0xda, 0x86, 0xd5, 0x11, 0x8b, 0x87,
+	0x78, 0x67, 0x65, 0xd7, 0xea, 0x34, 0x5c, 0xf5, 0xe0, 0x04, 0x70, 0xbf, 0x8f, 0xbd, 0xe0, 0x3b,
+	0x42, 0x09, 0x9f, 0x98, 0xd2, 0x0f, 0xa1, 0x4a, 0xfc, 0xd2, 0xba, 0x55, 0xe2, 0xa3, 0xaf, 0xe0,
+	0xde, 0x75, 0xe0, 0x0d, 0xa7, 0x01, 0xe1, 0xe2, 0x72, 0x16, 0xe1, 0xb4, 0xf2, 0x46, 0x6f, 0x4b,
+	0x03, 0xb3, 0x2e, 0x37, 0x8f, 0x74, 0x4e, 0x01, 0xc9, 0x6a, 0x3c, 0x5f, 0xee, 0x19, 0x34, 0x52,
+	0x1a, 0xe8, 0x88, 0xed, 0x58, 0xbb, 0x2b, 0x9d, 0x66, 0xef, 0x7d, 0x7d, 0x8a, 0x62, 0x67, 0xee,
+	0x1c, 0xe8, 0x9c, 0xab, 0xc6, 0xf9, 0x20, 0x89, 0xc7, 0xd8, 0x64, 0x5a, 0x6a, 0xcd, 0xfa, 0xcf,
+	0xad, 0x3d, 0x05, 0x48, 0xf3, 0xb9, 0x38, 0x0a, 0x66, 0xe8, 0x23, 0xa8, 0xc9, 0x4a, 0xba, 0x1d,
+	0x58, 0xb4, 0xe3, 0xa6, 0x76, 0x87, 0x41, 0xfb, 0x4d, 0x84, 0x69, 0x6a, 0x59, 0xcc, 0xeb, 0x9a,
+	0xf8, 0x77, 0xcd, 0x2b, 0x75, 0x2d, 0x66, 0x5a, 0xbd, 0x7b, 0xa6, 0xe5, 0x73, 0x22, 0xb0, 0x75,
+	0x95, 0xde, 0x7a, 0x17, 0x87, 0xec, 0x66, 0x7e, 0xe0, 0x0e, 0xd4, 0x43, 0x8f, 0x0b, 0x1c, 0xeb,
+	0xaa, 0x9b, 0x2a, 0xe3, 0x89, 0x98, 0x1c, 0xfa, 0x7e, 0x8c, 0x39, 0x77, 0xb5, 0x5f, 0x22, 0xd5,
+	0x6b, 0xa3, 0x6b, 0x97, 0x20, 0x95, 0xdf, 0x79, 0x05, 0x6d, 0x55, 0x4a, 0x5d, 0x63, 0x49, 0xc7,
+	0x63, 0x58, 0x53, 0x4e, 0xae, 0x19, 0x69, 0x6b, 0x46, 0xae, 0xbe, 0xd7, 0x5d, 0x19, 0xbf, 0xf3,
+	0x87, 0x05, 0xad, 0x23, 0x2f, 0xf0, 0xe8, 0x10, 0xab, 0xd8, 0x2e, 0x34, 0x03, 0x72, 0x83, 0xb5,
+	0xad, 0x94, 0x9d, 0x2c, 0x40, 0xe2, 0x39, 0xf1, 0xe7, 0xf8, 0x32, 0xa6, 0xb2, 0x00, 0xf4, 0x1c,
+	0x36, 0x64, 0xf8, 0x89, 0x98, 0x98, 0x90, 0x95, 0x92, 0x90, 0x02, 0xc6, 0xf9, 0x19, 0xb6, 0x2f,
+	0xd9, 0x14, 0xd3, 0xcb, 0xd8, 0xa3, 0x7c, 0x24, 0x69, 0x55, 0x84, 0xee, 0x42, 0x55, 0xb0, 0x3b,
+	0xc9, 0xac, 0x0a, 0x26, 0x5f, 0x68, 0x2f, 0x64, 0x09, 0x15, 0xa5, 0xad, 0x69, 0x9f, 0xf3, 0xbb,
+	0x05, 0xed, 0xf3, 0xc1, 0xe0, 0x4c, 0x2d, 0x1e, 0xc5, 0xc4, 0x2b, 0x58, 0xd3, 0x8b, 0x48, 0xb3,
+	0xe8, 0xa8, 0xd0, 0x02, 0xae, 0xab, 0x1f, 0x4e, 0xa8, 0x88, 0x67, 0xae, 0x09, 0xb1, 0xcf, 0xa1,
+	0x95, 0x75, 0xa0, 0x4d, 0x58, 0x99, 0xe2, 0x59, 0xda, 0xea, 0xba, 0x2b, 0x7f, 0xa2, 0x0e, 0xac,
+	0xde, 0x78, 0x41, 0x62, 0x38, 0x43, 0x3a, 0xbb, 0x17, 0x62, 0xdf, 0xe4, 0x57, 0x80, 0x97, 0xd5,
+	0x03, 0xcb, 0xf9, 0x1a, 0x5a, 0x59, 0x17, 0x7a, 0x52, 0xec, 0xee, 0xfe, 0x52, 0xfc, 0xbc, 0x19,
+	0xe7, 0x0a, 0x9a, 0x19, 0x3b, 0x42, 0x50, 0xa3, 0x5e, 0x88, 0x75, 0x33, 0xe9, 0x6f, 0xf4, 0x1c,
+	0xea, 0x0a, 0xad, 0xdb, 0x79, 0xd8, 0x25, 0xac, 0xbb, 0x58, 0xd0, 0x5d, 0xb5, 0xa0, 0xf5, 0x61,
+	0x5d, 0x8d, 0xed, 0xfd, 0xb9, 0x02, 0x1b, 0x72, 0x85, 0x9e, 0x79, 0xd4, 0x1b, 0xe3, 0x10, 0x53,
+	0x81, 0x9e, 0x43, 0x4d, 0xde, 0x44, 0xf4, 0x60, 0xb1, 0x90, 0x33, 0x0b, 0xd6, 0xde, 0x2a, 0x9a,
+	0xa3, 0x60, 0xe6, 0x54, 0xd0, 0xe7, 0xd0, 0x18, 0x24, 0x7c, 0x22, 0xcd, 0xa8, 0xa9, 0x20, 0xc7,
+	0x93, 0x84, 0x4e, 0x6d, 0xbd, 0x21, 0x07, 0x31, 0x1b, 0xcb, 0x99, 0x3a, 0x95, 0x8e, 0xb5, 0x6f,
+	0xa1, 0x17, 0xb0, 0x7a, 0x21, 0xbc, 0x58, 0xa0, 0xf7, 0x94, 0x3b, 0x7d, 0x90, 0xc1, 0xa6, 0xcc,
+	0xf6, 0x92, 0x5d, 0xd5, 0x79, 0x05, 0xcd, 0x8c, 0x98, 0xa0, 0x1d, 0x05, 0x5b, 0xd6, 0x17, 0xdb,
+	0xd0, 0xa9, 0xac, 0x17, 0x11, 0x1e, 0x3a, 0x15, 0xb4, 0x07, 0xf5, 0x0b, 0xe1, 0x89, 0x84, 0xa3,
+	0x9c, 0xdc, 0xd8, 0x99, 0xb3, 0x2a, 0xbf, 0x29, 0xf7, 0x25, 0xd4, 0x5e, 0xb3, 0x31, 0xcf, 0x91,
+	0xc1, 0xc6, 0xbc, 0x8c, 0x0c, 0x36, 0xe6, 0xe9, 0x89, 0x9d, 0xca, 0xbe, 0x85, 0x3e, 0x86, 0xda,
+	0x85, 0x60, 0x51, 0xa1, 0x8c, 0x26, 0xe6, 0x24, 0x8c, 0x84, 0x4c, 0xde, 0x93, 0x9c, 0x05, 0x41,
+	0xca, 0x99, 0x2e, 0x60, 0x9e, 0x4d, 0x81, 0x2c, 0x95, 0x32, 0x71, 0xef, 0x9f, 0x1a, 0x6c, 0xc8,
+	0x35, 0x98, 0x19, 0xd8, 0x23, 0x3d, 0x30, 0x83, 0x95, 0x2f, 0x84, 0xbd, 0xb9, 0xd8, 0xa1, 0x7c,
+	0x31, 0xa3, 0xc2, 0xe9, 0xd5, 0x4b, 0x64, 0x4e, 0xd1, 0xd7, 0xbb, 0xde, 0xc0, 0xf7, 0xa1, 0xae,
+	0xd4, 0x00, 0xdd, 0xa5, 0x0f, 0xc5, 0x03, 0xbd, 0x84, 0xa6, 0xf2, 0xa7, 0x65, 0xcd, 0x70, 0x96,
+	0x25, 0xc8, 0xd6, 0xfb, 0xec, 0x24, 0x8e, 0x59, 0x7c, 0x34, 0x3b, 0xed, 0x3b, 0x15, 0x74, 0x00,
+	0x90, 0x6a, 0x8b, 0x0a, 0xcd, 0x54, 0xcc, 0x49, 0x4e, 0x59, 0xe4, 0x13, 0xa8, 0x49, 0x71, 0x30,
+	0x14, 0x16, 0x84, 0xc2, 0xce, 0xa8, 0x89, 0x53, 0x41, 0xc7, 0x80, 0x8e, 0x27, 0x1e, 0x9d, 0x27,
+	0xe4, 0x29, 0x75, 0x79, 0x3e, 0x3e, 0x5c, 0x44, 0xe4, 0xb1, 0x86, 0x99, 0x6f, 0x60, 0xeb, 0x38,
+	0xc6, 0x9e, 0xc0, 0x39, 0x77, 0xb6, 0xe9, 0x9c, 0xc3, 0xce, 0xa5, 0x77, 0x2a, 0xe8, 0x19, 0x6c,
+	0x1f, 0x46, 0x51, 0xcc, 0x6e, 0x0a, 0x09, 0xf2, 0x6d, 0x2c, 0xdd, 0x96, 0xad, 0x63, 0xb9, 0x4b,
+	0x83, 0xff, 0x11, 0x73, 0x00, 0x0d, 0xf3, 0x9d, 0x63, 0xe8, 0x29, 0x7c, 0xf7, 0xdc, 0x31, 0xfc,
+	0xde, 0x5f, 0x16, 0x6c, 0x9e, 0xa5, 0x52, 0x96, 0xb9, 0x69, 0x07, 0xd0, 0x54, 0xfa, 0xa3, 0x58,
+	0x5b, 0x5a, 0xd8, 0xe6, 0x3d, 0x2a, 0xe8, 0x59, 0x7a, 0x97, 0xee, 0x29, 0xe3, 0x31, 0xa3, 0x23,
+	0x12, 0x87, 0x25, 0xb1, 0x4b, 0xad, 0xb7, 0xb2, 0x0a, 0x8c, 0x3e, 0xc8, 0xa6, 0xce, 0xa9, 0x72,
+	0x21, 0xb2, 0xf7, 0x77, 0x15, 0xda, 0xa9, 0xd8, 0x64, 0x3a, 0xef, 0x00, 0x5c, 0x62, 0x2e, 0x52,
+	0x33, 0x47, 0xd9, 0x80, 0x62, 0xdd, 0xa7, 0xb0, 0x66, 0xa4, 0x2e, 0x07, 0xd3, 0xeb, 0x3d, 0xab,
+	0xb5, 0xe9, 0x24, 0xd7, 0xb5, 0xe5, 0xcd, 0xa8, 0xe4, 0x4c, 0xe5, 0x41, 0x9f, 0xc2, 0x5a, 0x1f,
+	0x47, 0x8c, 0x93, 0x77, 0x4c, 0xef, 0x11, 0x34, 0xae, 0x88, 0x98, 0xf8, 0xb1, 0x77, 0xfb, 0x76,
+	0x60, 0x17, 0xda, 0x67, 0xe9, 0x67, 0xfb, 0x61, 0x10, 0xb0, 0xdb, 0xe5, 0xde, 0x8b, 0xf7, 0xef,
+	0x0b, 0x68, 0x18, 0x21, 0x46, 0xb6, 0xde, 0x50, 0x25, 0xea, 0x5c, 0x24, 0x76, 0x02, 0xeb, 0xf3,
+	0x6f, 0x3a, 0xb4, 0xaf, 0xb7, 0xce, 0xf2, 0xa1, 0xb7, 0x0b, 0x9f, 0x7f, 0xe6, 0xd8, 0x8f, 0xa1,
+	0xae, 0x67, 0xf9, 0xae, 0xe1, 0xf7, 0x7e, 0xb3, 0xa0, 0x31, 0x88, 0xd9, 0x88, 0x04, 0x98, 0x17,
+	0x05, 0xc9, 0xd8, 0x0b, 0x17, 0x78, 0x61, 0x36, 0x24, 0x9b, 0x65, 0xd7, 0x9c, 0x57, 0x3b, 0xed,
+	0xdb, 0xf7, 0x72, 0x68, 0xc5, 0x9d, 0xea, 0xea, 0x50, 0x88, 0x98, 0x5c, 0x27, 0x02, 0xbf, 0x95,
+	0xeb, 0xde, 0xb7, 0x00, 0x67, 0x8c, 0x12, 0xc1, 0x62, 0x42, 0xc7, 0xa8, 0x07, 0xa0, 0x05, 0xfd,
+	0x7c, 0x30, 0xc8, 0x93, 0xfe, 0xa0, 0xf4, 0x6b, 0xc3, 0xa9, 0x5c, 0xd7, 0xd3, 0xbf, 0x45, 0xcf,
+	0xfe, 0x0d, 0x00, 0x00, 0xff, 0xff, 0xfa, 0x45, 0xd0, 0xa0, 0xb8, 0x0d, 0x00, 0x00,
 }

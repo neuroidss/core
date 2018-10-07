@@ -1,6 +1,8 @@
 syntax = "proto3";
 
+import "bigint.proto";
 import "capabilities.proto";
+import "timestamp.proto";
 
 package sonm;
 
@@ -10,27 +12,22 @@ message ID {
     string id = 1;
 }
 
+message NumericID {
+    uint64 id = 1;
+}
+
+message EthID {
+    EthAddress id = 1;
+}
+
 message TaskID {
     // Id is task ID itself
     string id = 1;
-    // HubID is ID of hub on which task if running
-    string hubAddr = 2;
+    BigInt dealID = 2;
 }
 
-enum NetworkType {
-    NO_NETWORK = 0;
-    OUTBOUND = 1;
-    INCOMING = 2;
-}
-
-enum GPUCount {
-    NO_GPU = 0;
-    SINGLE_GPU = 1;
-    MULTIPLE_GPU = 2;
-}
-
-message PingReply {
-    string status = 1;
+message Count {
+    uint64 count = 1;
 }
 
 message CPUUsage {
@@ -58,58 +55,6 @@ message ResourceUsage {
     map<string, NetworkUsage> network = 3;
 }
 
-message InfoReply {
-    map<string, ResourceUsage> usage = 1;
-    string name = 2;
-    Capabilities capabilities = 3;
-}
-
-message TaskStatusReply {
-    enum Status {
-        UNKNOWN = 0;
-        SPOOLING = 1;
-        SPAWNING = 2;
-        RUNNING = 3;
-        FINISHED = 4;
-        BROKEN = 5;
-    }
-    Status status = 1;
-    string imageName = 2;
-    string ports = 3;
-    uint64 uptime = 4;
-    ResourceUsage usage = 5;
-    AvailableResources availableResources = 6;
-    string minerID = 7;
-}
-
-message AvailableResources {
-    int64 numCPUs = 1;
-    int64 numGPUs = 2;
-    uint64 memory = 3;
-    int64 CPUPeriod = 4;
-    int64 CPUQuota = 5;
-    int64 CPURealtimePeriod = 6;
-    int64 CPURealtimeRuntime = 7;
-    string CpusetCpus = 8;
-    string CpusetMems = 9;
-    int64 DiskQuota = 10;
-    int64 KernelMemory = 11;
-    int64 MemoryReservation = 12;
-    int64 MemorySwap = 13;
-    int64 PidsLimit = 14;
-    string cgroup = 15;
-    string cgroupParent = 16;
-}
-
-message StatusMapReply {
-    map<string, TaskStatusReply> statuses = 1;
-}
-
-message ContainerRestartPolicy {
-    string name = 1;
-    uint32 maximumRetryCount = 2;
-}
-
 message TaskLogsRequest {
     enum Type {
         STDOUT = 0;
@@ -123,38 +68,12 @@ message TaskLogsRequest {
     bool Follow = 5;
     string Tail = 6;
     bool Details = 7;
-    string hubAddr = 8;
+    BigInt dealID = 8;
 }
 
 message TaskLogsChunk {
     bytes data = 1;
 }
-
-message DiscoverHubRequest {
-    string endpoint = 1;
-}
-
-message TaskResourceRequirements {
-    // CPUCores specifies the number of CPU cores required.
-    uint64 CPUCores = 1;
-    // MaxMemory specifies the maximum memory in bytes required.
-    int64 maxMemory = 2;
-    // GPUCount Describes whether a task requires GPU support.
-    GPUCount GPUSupport = 3;
-}
-
-message Timestamp {
-    // Represents seconds of UTC time since Unix epoch 1970-01-01T00:00:00Z.
-    // Must be from 0001-01-01T00:00:00Z to 9999-12-31T23:59:59Z inclusive.
-    int64 seconds = 1;
-
-    // Non-negative fractions of a second at nanosecond resolution. Negative
-    // second values with fractions must still have non-negative nanos values
-    // that count forward in time. Must be from 0 to 999'999'999
-    // inclusive.
-    int32 nanos = 2;
-}
-
 
 message Chunk {
     bytes chunk = 1;
@@ -162,4 +81,24 @@ message Chunk {
 
 message Progress {
     int64 size = 1;
+}
+
+message Duration {
+    int64 nanoseconds = 1;
+}
+
+message EthAddress {
+    bytes address = 1;
+}
+
+message DataSize {
+    uint64 bytes = 1;
+}
+
+message DataSizeRate {
+    uint64 bitsPerSecond = 1;
+}
+
+message Price {
+    BigInt perSecond = 1;
 }
